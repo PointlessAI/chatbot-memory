@@ -1,4 +1,3 @@
 depressed,
 anxiety,
-anger management,
-schizophrenic
+lacks confidence,
