@@ -64,8 +64,8 @@ class ChatBot:
         self.chat_history.append({"role": "developer", "content": friend_response})
 
         num_chat_history = len(self.chat_history)
-        print(f"Number of chat history entries: {num_chat_history}")
-        print(self.chat_history)
+        # print(f"Number of chat history entries: {num_chat_history}")
+        # print(self.chat_history)
         
         # Summarize the chat history if it exceeds 15 messages
         if num_chat_history >= 15:
@@ -81,7 +81,7 @@ class ChatBot:
         return friend_response
 
     def start_chat(self):
-        print("General chat that remembers history")
+        print("Chat with me")
         while True:
             user_input = input("User: ")
             friend_response = self.generate_response(user_input)
