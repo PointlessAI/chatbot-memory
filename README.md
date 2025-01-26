@@ -1,7 +1,7 @@
 # GPT friend with extensible personality
+## Modify basic info in basic-info.txt
 ## Add personality files to the personality_mod folder
-* Modify basic info in basic-info.txt
-* E.G. To add work details create work.txt and list work details. This will then become a part of the friends personality.
+## E.G. To add work details create work.txt and list work details as below. This will then become a part of the friends personality.
 - Works as a software developer at a tech company.
 - Enjoys solving complex coding problems.
 - Recently completed a project on artificial intelligence.
