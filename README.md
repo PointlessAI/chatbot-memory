@@ -1,4 +1,6 @@
 # GPT friend with extensible personality
+* Install in a Python venv with .env file containing export OPENAI_API_KEY=""
+* v1.0
 ## Modify basic info in basic-info.txt
 ## Add personality files to the personality_mod folder
 ## E.G. To add work details create work.txt and list work details as below. This will then become a part of the friends personality.
