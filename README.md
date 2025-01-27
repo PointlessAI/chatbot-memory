@@ -1,4 +1,5 @@
-# GPT friend with extensible personality
+# ChatGPT API Friend
+* The ChatGPT API has a bad memory and annoying personality. This application enables long term persistant memory and customizable personality. 
 # Add personality files or grow existing personality dynamically
 # Friend's personality is retained and accessable each new instance.
 * Install in a Python venv with .env file containing export OPENAI_API_KEY=""
