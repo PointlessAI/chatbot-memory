@@ -15,7 +15,7 @@ class ChatBot:
 
         # Initialize attributes
         self.directory = "my-personality"  # Set directory before calling personality()
-        self.chat_history_summary_count = 5
+        self.chat_history_summary_count = 15
 
         # Generate personality
         personality = self.personality()
@@ -93,9 +93,9 @@ class ChatBot:
                 ]
             )
 
-            print("Raw API Response:", response)  # Debugging
+            # print("Raw API Response:", response)  # Debugging
             content = response.choices[0].message.content.strip()
-            print("API Content:", content)  # Debugging
+            # print("API Content:", content)  # Debugging
 
             # Parse the content into a JSON object
             categorized_content = json.loads(content)
@@ -112,7 +112,7 @@ class ChatBot:
             try:
                 with open(file_path, "a", encoding="utf-8") as file:
                     file.write(f"\n{content.strip()}")
-                    print(f"Updated {category}.txt successfully.")
+                    # print(f"Updated personality module: {category}.txt successfully.")
             except Exception as e:
                 print(f"Error writing to file {file_path}: {e}")
 
@@ -150,8 +150,8 @@ class ChatBot:
 
         # Check if chat history is too large and if so summarize:
         num_chat_history = len(self.chat_history)
-        print(f"\nNumber of chat history entries: {num_chat_history}\n")
-        print(self.chat_history)
+        # print(f"\nNumber of chat history entries: {num_chat_history}\n")
+        # print(self.chat_history)
 
         if num_chat_history >= self.chat_history_summary_count:
             chat_history_string = "\n".join([f"{entry['role']}: {entry['content']}" for entry in self.chat_history])
