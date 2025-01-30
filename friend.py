@@ -16,7 +16,7 @@ class ChatBot:
 
         # Initialize attributes
         self.directory = "my-personality"  # Set directory before calling personality()
-        self.chat_history_summary_count = 5
+        self.chat_history_summary_count = 15
 
         # Generate personality
         personality = self.personality()
@@ -245,8 +245,8 @@ class ChatBot:
 
         # Check if chat history is too large and if so summarize:
         num_chat_history = len(self.chat_history)
-        # print(f"\nNumber of chat history entries: {num_chat_history}\n")
-        # print(self.chat_history)
+        print(f"\nNumber of chat history entries: {num_chat_history}\n")
+        print(self.chat_history)
 
         if num_chat_history >= self.chat_history_summary_count:
             chat_history_string = "\n".join([f"{entry['role']}: {entry['content']}" for entry in self.chat_history])
