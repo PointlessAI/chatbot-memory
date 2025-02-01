@@ -26,7 +26,7 @@ class ChatBot:
         self.chat_history = [
             {"role": "system", "content": f"{self.human} Your personality is {personality}"}
         ]
-        self.chat_history_summary_count = 5
+        self.chat_history_summary_count = 15
 
     def summarize_chat_history(self, chat_history_string):
         """

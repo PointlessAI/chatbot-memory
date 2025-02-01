@@ -183,15 +183,25 @@ class PersonalityManager:
     def update_from_response(self, response_text: str, client):
         """
         Uses the ChatGPT API to analyze the chatbot's response text and extract personality updates dynamically.
-        For any new self-descriptive statements (for example, "I like tennis" or "I feel happy"),
-        it returns a JSON object mapping personality attributes (e.g., 'what-i-like', 'how-i-feel') to the new information.
+        It only extracts self-descriptive statements about the chatbot's personality. Any mention of the user's
+        preferences is ignored.
+        
+        The personality attributes to consider are determined dynamically based on the files in the personality directory.
         """
+        # Dynamically get the personality keys from the files in the directory.
+        personality_keys = self.get_filenames()  # e.g., ['what-i-like', 'how-i-feel', 'my-hobbies', ...]
+        keys_string = ", ".join([f"'{key}'" for key in personality_keys])
+
         system_prompt = (
-            "You are a personality extraction assistant. Analyze the following chatbot response and extract any new personality updates. "
-            "The personality attributes to consider are: 'what-i-like', 'how-i-feel', 'my-hobbies', 'how-i-talk', "
-            "'my-mood', 'what-i-don’t-like', '1-who-i-am', and 'how-i-react'. "
-            "For each attribute, if the response contains new information that should be added, include it as a key-value pair in the output. "
-            "Return a valid JSON object containing only the keys that have updates. Do not include any extra explanation."
+            "You are a personality extraction assistant. Analyze the following chatbot response (written in the first person) "
+            "and extract any updates to the chatbot's own personality attributes. "
+            f"The personality attributes to consider are: {keys_string}. "
+            "IMPORTANT: Only extract information that the chatbot is explicitly describing about itself. "
+            "Do not extract or update any information that refers to the user's preferences or opinions. "
+            "For example, if the chatbot states 'I love Interstellar', that should be extracted under the appropriate attribute "
+            "(e.g., 'what-i-like'). If the chatbot says something like 'Contact is a fantastic choice, Rob!', ignore that part. "
+            "Return a valid JSON object containing only the keys that have new updates for the chatbot's personality. "
+            "Do not include any extra explanation."
         )
 
         try:
@@ -207,6 +217,16 @@ class PersonalityManager:
         except Exception as e:
             print(f"Error extracting personality updates: {e}")
             return
+
+        # Update each corresponding personality file with the new information
+        for key, text in updates.items():
+            file_path = os.path.join(self.directory, f"{key}.txt")
+            try:
+                with open(file_path, "a", encoding="utf-8") as file:
+                    file.write(f"\n{text.strip()}")
+                    print(f"Updated personality module: {key}.txt with text: {text.strip()}")
+            except Exception as e:
+                print(f"Error writing to file {file_path}: {e}")
 
         # Update each corresponding personality file with the new information
         for key, text in updates.items():
