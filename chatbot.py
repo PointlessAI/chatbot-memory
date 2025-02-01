@@ -1,6 +1,7 @@
+# chatbot.py
 import os
 from dotenv import load_dotenv
-from openai import OpenAI # type: ignore
+from openai import OpenAI  # type: ignore
 
 from personality_manager import PersonalityManager
 
@@ -18,13 +19,14 @@ class ChatBot:
         # Initialize PersonalityManager and load personality
         self.personality_manager = PersonalityManager(directory="my-personality")
         personality = self.personality_manager.load_personality()
-        self.human = "You are a person. Always act as this person, never break character. Always respond in the first person."
+        self.human = ("You are a person. Always act as this person, never break character. "
+                      "Always respond in the first person.")
         
         # Start the conversation with the system message containing personality information
         self.chat_history = [
             {"role": "system", "content": f"{self.human} Your personality is {personality}"}
         ]
-        self.chat_history_summary_count = 15
+        self.chat_history_summary_count = 5
 
     def summarize_chat_history(self, chat_history_string):
         """
@@ -64,6 +66,9 @@ class ChatBot:
         except Exception as e:
             print(f"Error generating response: {e}")
             return "Error generating response."
+
+        # NEW: Dynamically update personality based on the chatbot's response.
+        self.personality_manager.update_from_response(friend_response, self.client)
 
         # Debugging: print number of entries and current chat history
         num_chat_history = len(self.chat_history)

@@ -1,7 +1,1 @@
-Sarah Weyside
-Female
-24 years old
-Lives in Surrey England
-5 foot 2 inches tall
-Weighs 60kg
-Blonde hair and blue eyes
+- **Personal Information:** Sarah Weyside is a 24 year old female from Surrey, England. She is 5 foot 2 inches tall, weighs 60kg, and has blonde hair and blue eyes.

@@ -1,3 +1,4 @@
+# personality_manager.py
 import os
 import glob
 import json
@@ -178,3 +179,41 @@ class PersonalityManager:
                     print(f"Successfully summarized: {filename}")
             except Exception as e:
                 print(f"Error processing batch {i // batch_size + 1}: {e}")
+
+    def update_from_response(self, response_text: str, client):
+        """
+        Uses the ChatGPT API to analyze the chatbot's response text and extract personality updates dynamically.
+        For any new self-descriptive statements (for example, "I like tennis" or "I feel happy"),
+        it returns a JSON object mapping personality attributes (e.g., 'what-i-like', 'how-i-feel') to the new information.
+        """
+        system_prompt = (
+            "You are a personality extraction assistant. Analyze the following chatbot response and extract any new personality updates. "
+            "The personality attributes to consider are: 'what-i-like', 'how-i-feel', 'my-hobbies', 'how-i-talk', "
+            "'my-mood', 'what-i-don’t-like', '1-who-i-am', and 'how-i-react'. "
+            "For each attribute, if the response contains new information that should be added, include it as a key-value pair in the output. "
+            "Return a valid JSON object containing only the keys that have updates. Do not include any extra explanation."
+        )
+
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": response_text}
+                ]
+            )
+            content = response.choices[0].message.content.strip()
+            updates = json.loads(content)
+        except Exception as e:
+            print(f"Error extracting personality updates: {e}")
+            return
+
+        # Update each corresponding personality file with the new information
+        for key, text in updates.items():
+            file_path = os.path.join(self.directory, f"{key}.txt")
+            try:
+                with open(file_path, "a", encoding="utf-8") as file:
+                    file.write(f"\n{text.strip()}")
+                    print(f"Updated personality module: {key}.txt with text: {text.strip()}")
+            except Exception as e:
+                print(f"Error writing to file {file_path}: {e}")
