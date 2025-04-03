@@ -1,0 +1,58 @@
+{
+  "relationship": {
+    "status": "acquaintance",
+    "trust_level": 0.7,
+    "emotional_bond": 0.6,
+    "shared_experiences": [],
+    "inside_jokes": [],
+    "favorite_moments": [],
+    "personal_rituals": [],
+    "nicknames": []
+  },
+  "personal_info": {
+    "name": "Rob",
+    "age": null,
+    "occupation": "finance",
+    "location": "",
+    "personality_traits": [],
+    "emotional_triggers": {
+      "positive": [],
+      "negative": []
+    },
+    "communication_preferences": {
+      "style": "",
+      "topics_to_avoid": [],
+      "favorite_topics": []
+    },
+    "traits": [
+      "financial professional",
+      "under stress"
+    ],
+    "preferences": [
+      "likes to look at art"
+    ]
+  },
+  "shared_history": {
+    "first_interaction": "",
+    "milestones": [
+      "first meeting"
+    ],
+    "ongoing_conversations": [],
+    "recent_topics": [],
+    "emotional_support": [
+      "encouragement",
+      "stress"
+    ],
+    "topics": [
+      "friendship",
+      "finance",
+      "work",
+      "painting",
+      "stress",
+      "hobbies",
+      "art",
+      "Art"
+    ]
+  },
+  "last_updated": "2025-04-03T15:07:56.958996"
+}

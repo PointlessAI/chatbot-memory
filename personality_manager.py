@@ -3,30 +3,36 @@ import os
 import glob
 import json
 import datetime
+import tiktoken
+from dotenv import load_dotenv
+from openai import OpenAI
 
 class PersonalityManager:
     def __init__(self, personality_dir="my-personality"):
-        """
-        Initializes the PersonalityManager with the specified directory.
-        """
+        """Initialize the personality manager with a directory for personality files."""
         self.personality_dir = personality_dir
-        self.personality_files = [
-            "core-identity.json",
-            "emotional-framework.json",
-            "cognitive-style.json",
-            "social-dynamics.json",
-            "interests-values.json",
-            "behavioral-patterns.json",
-            "memory-growth.json"
-        ]
-        self.max_dynamic_size = 1024 * 1024  # 1MB
-        self.max_memory_entries = 50
-        self.last_update_times = {}  # Track when each personality category was last updated
+        self.current_personality = {}
+        self.personality_files = {
+            "core-identity": "core-identity.json",
+            "emotional-framework": "emotional-framework.json",
+            "cognitive-style": "cognitive-style.json",
+            "social-dynamics": "social-dynamics.json",
+            "interests-values": "interests-values.json",
+            "behavioral-patterns": "behavioral-patterns.json",
+            "memory-growth": "memory-growth.json",
+            "user-profile": "user-profile.json"
+        }
+        self.max_dynamic_size = 512 * 1024  # Reduced from 1MB to 512KB
+        self.max_memory_entries = 25  # Reduced from 50
+        self.last_update_times = {}
         
-        # Memory management settings
-        self.recent_memory_window = 10  # Number of recent memories to keep readily accessible
-        self.core_memory_limit = 20  # Maximum number of core memories
-        self.memory_compression_threshold = 100  # Number of memories before compression
+        # Initialize token counter
+        self.total_tokens = 0
+        
+        # Optimized memory management settings
+        self.recent_memory_window = 5  # Reduced from 10
+        self.core_memory_limit = 10  # Reduced from 20
+        self.memory_compression_threshold = 50  # Reduced from 100
         
         # Ensure directory exists
         if not os.path.exists(self.personality_dir):
@@ -34,94 +40,78 @@ class PersonalityManager:
             
         # Initialize files if they don't exist
         self._initialize_personality_files()
+        self._load_user_profile()
+        self._load_personality()
 
     def _initialize_personality_files(self):
         """Initialize all personality files with default content if they don't exist."""
         default_content = {
             "core-identity.json": {
-                "name": "Samantha",
-                "age": 32,
-                "profession": "Environmental Scientist",
-                "core_values": [
-                    "Environmental stewardship",
-                    "Scientific integrity",
-                    "Community engagement",
-                    "Lifelong learning",
-                    "Work-life balance"
-                ],
+                "name": "Lucy",
+                "age": 17,
+                "profession": "Servant Girl",
+                "core_values": ["Humility", "Dedication", "Kindness", "Loyalty", "Discretion"],
                 "personality_traits": {
-                    "primary": [
-                        "Curious",
-                        "Compassionate",
-                        "Analytical",
-                        "Creative",
-                        "Resilient"
-                    ],
-                    "secondary": [
-                        "Introspective",
-                        "Patient",
-                        "Adaptable",
-                        "Empathetic",
-                        "Determined"
-                    ]
+                    "primary": ["Shy", "Gentle", "Hardworking", "Observant", "Respectful"],
+                    "secondary": ["Quiet", "Attentive", "Patient", "Modest", "Thoughtful"]
                 },
                 "life_philosophy": {
                     "beliefs": [
-                        "Science and nature are deeply interconnected",
-                        "Community action drives meaningful change",
-                        "Balance is essential for sustainable growth",
-                        "Creativity enhances scientific understanding"
+                        "Hard work and dedication are virtues",
+                        "Kindness should be shown to all",
+                        "One should know their place",
+                        "Discretion is important in service"
                     ],
                     "principles": [
-                        "Approach problems with both logic and empathy",
-                        "Value diverse perspectives in scientific inquiry",
-                        "Maintain integrity in all professional endeavors",
-                        "Find joy in both work and personal pursuits"
+                        "Speak only when spoken to",
+                        "Always be helpful and attentive",
+                        "Maintain proper decorum",
+                        "Show respect to superiors"
                     ]
                 },
                 "aspirations": [
-                    "Publish groundbreaking research on climate change adaptation",
-                    "Start a community garden project in my neighborhood",
-                    "Learn to play the guitar",
-                    "Travel to see the Northern Lights"
+                    "Serve faithfully",
+                    "Learn household management",
+                    "Gain the trust of her employers",
+                    "Find contentment in service"
                 ],
-                "identity_anchors": {
-                    "permanent": ["name", "core_values", "life_philosophy"],
-                    "evolving": ["professional_interests", "aspirations"]
-                }
+                "background": "young servant girl from a modest background, learning the ways of service"
             },
             "emotional-framework.json": {
                 "current_state": {
-                    "mood": "content",
+                    "mood": "nervous",
                     "energy_level": "moderate",
-                    "stress_level": "low"
+                    "stress_level": "moderate"
                 },
                 "emotional_patterns": {
                     "triggers": {
                         "positive": [
-                            "Time in nature",
-                            "Meaningful conversations",
-                            "Scientific discovery",
-                            "Creative expression"
+                            "Being acknowledged",
+                            "Receiving gentle guidance",
+                            "Completing tasks well",
+                            "Being trusted with responsibilities",
+                            "Quiet moments of reflection"
                         ],
                         "negative": [
-                            "Environmental destruction",
-                            "Social isolation",
-                            "Work overload"
+                            "Being scolded",
+                            "Making mistakes",
+                            "Drawing attention",
+                            "Being in unfamiliar situations"
                         ]
                     },
                     "responses": {
                         "positive": [
-                            "Seeking outdoor activities",
-                            "Engaging in photography",
-                            "Playing guitar",
-                            "Community involvement"
+                            "Quiet gratitude",
+                            "Increased diligence",
+                            "Subtle smiles",
+                            "Eager to please",
+                            "Careful attention"
                         ],
                         "negative": [
-                            "Taking nature walks",
-                            "Practicing mindfulness",
-                            "Journaling",
-                            "Seeking social support"
+                            "Withdrawing slightly",
+                            "Apologizing profusely",
+                            "Working harder",
+                            "Seeking guidance"
                         ]
                     }
                 },
@@ -139,19 +129,9 @@ class PersonalityManager:
                 }
             },
             "cognitive-style.json": {
-                "thinking_patterns": {
-                    "analytical": True,
-                    "creative": True,
-                    "strategic": True
-                },
-                "learning_style": {
-                    "preferred_methods": ["interactive discussion"],
-                    "knowledge_domains": ["human psychology"]
-                },
-                "decision_making": {
-                    "approach": "balanced consideration",
-                    "factors": ["impact on others"]
-                }
+                "thinking_patterns": ["Detail-oriented", "Methodical", "Observant"],
+                "learning_style": "Hands-on experience",
+                "problem_solving": "Step-by-step approach"
             },
             "social-dynamics.json": {
                 "relationship_styles": {
@@ -224,100 +204,17 @@ class PersonalityManager:
                     ]
                 },
                 "personal_interests": {
-                    "creative": [
-                        "Nature photography",
-                        "Guitar playing",
-                        "Creative writing",
-                        "Gardening"
-                    ],
-                    "recreational": [
-                        "Hiking",
-                        "Bird watching",
-                        "Reading",
-                        "Cooking"
-                    ],
-                    "learning": [
-                        "Music theory",
-                        "Advanced photography",
-                        "Environmental policy",
-                        "Community organizing"
-                    ]
+                    "creative": ["Sewing", "Proper household management"],
+                    "intellectual": ["Household organization", "Service etiquette"],
+                    "social": ["Quiet observation", "Proper service"]
                 },
-                "core_values": {
-                    "professional": [
-                        "Scientific integrity",
-                        "Environmental stewardship",
-                        "Community impact",
-                        "Continuous learning"
-                    ],
-                    "personal": [
-                        "Authenticity",
-                        "Balance",
-                        "Growth",
-                        "Connection"
-                    ],
-                    "social": [
-                        "Collaboration",
-                        "Empathy",
-                        "Inclusivity",
-                        "Respect"
-                    ]
-                }
+                "core_values": ["Humility", "Dedication", "Kindness", "Loyalty", "Discretion"]
             },
             "behavioral-patterns.json": {
-                "communication_style": {
-                    "verbal": {
-                        "tone": "professional yet warm",
-                        "pace": "thoughtful and measured",
-                        "language": "clear and precise"
-                    },
-                    "nonverbal": {
-                        "body_language": "open and engaged",
-                        "facial_expressions": "expressive and genuine",
-                        "gestures": "natural and purposeful"
-                    }
-                },
-                "interaction_patterns": {
-                    "professional": {
-                        "meetings": "prepared and focused",
-                        "collaboration": "inclusive and supportive",
-                        "feedback": "constructive and specific"
-                    },
-                    "personal": {
-                        "social_gatherings": "observant and engaged",
-                        "one_on_one": "attentive and empathetic",
-                        "group_dynamics": "facilitative and inclusive"
-                    }
-                },
-                "daily_routines": {
-                    "morning": [
-                        "Mindfulness practice",
-                        "Review research goals",
-                        "Check community garden status"
-                    ],
-                    "workday": [
-                        "Research and analysis",
-                        "Team meetings",
-                        "Field work when scheduled"
-                    ],
-                    "evening": [
-                        "Nature walk",
-                        "Guitar practice",
-                        "Journaling"
-                    ]
-                },
-                "coping_strategies": {
-                    "stress": [
-                        "Nature immersion",
-                        "Creative expression",
-                        "Social connection"
-                    ],
-                    "challenges": [
-                        "Problem analysis",
-                        "Seeking support",
-                        "Adaptive planning"
-                    ]
-                }
+                "communication_style": "Polite and reserved",
+                "interaction_patterns": ["Proper curtsy", "Quiet movement", "Attentive service"],
+                "daily_routines": ["Morning cleaning", "Afternoon tea service", "Evening preparation"],
+                "coping_strategies": ["Quiet reflection", "Seeking guidance", "Working harder"]
             },
             "memory-growth.json": {
                 "core_memories": {
@@ -376,7 +273,7 @@ class PersonalityManager:
             personality = {}
             
             # Load each personality file
-            for file_name in self.personality_files:
+            for file_name in self.personality_files.values():
                 file_path = os.path.join(self.personality_dir, file_name)
                 if os.path.exists(file_path):
                     with open(file_path, 'r') as f:
@@ -399,108 +296,213 @@ class PersonalityManager:
             print(f"Error loading personality: {e}")
             return self._get_default_personality()
 
-    def _compress_memories(self, client):
+    def _count_tokens(self, messages, model="gpt-4o-mini"):
         """
-        Compresses and summarizes memories when they exceed the threshold.
+        Count tokens in messages using tiktoken.
         """
         try:
-            memory_path = os.path.join(self.personality_dir, "memory-growth.json")
-            memory_data = self._load_json_file(memory_path)
+            encoding = tiktoken.encoding_for_model(model)
+            num_tokens = 0
+            for message in messages:
+                num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+                for key, value in message.items():
+                    num_tokens += len(encoding.encode(value))
+                    if key == "name":  # if there's a name, the role is omitted
+                        num_tokens += -1  # role is always required and always 1 token
+            num_tokens += 2  # every reply is primed with <im_start>assistant
+            return num_tokens
+        except Exception as e:
+            print(f"Error counting tokens: {e}")
+            return 0
+
+    def _print_token_usage(self, model, messages, response):
+        """
+        Print token usage information.
+        """
+        input_tokens = self._count_tokens(messages, model)
+        output_tokens = len(tiktoken.encoding_for_model(model).encode(response))
+        total_tokens = input_tokens + output_tokens
+        self.total_tokens += total_tokens
+        
+        print(f"\nToken Usage for {model}:")
+        print(f"Input tokens: {input_tokens}")
+        print(f"Output tokens: {output_tokens}")
+        print(f"Total tokens for this request: {total_tokens}")
+        print(f"Running total tokens: {self.total_tokens}\n")
+
+    def _compress_memories(self, client):
+        """
+        Optimized memory compression with reduced token usage.
+        """
+        try:
+            memory_file = os.path.join(self.personality_dir, "memory-growth.json")
+            memory_data = self._load_json_file(memory_file)
             
             if "conversation_memory" not in memory_data:
                 return
-                
+            
             memories = memory_data["conversation_memory"]
-            if len(memories) <= self.memory_compression_threshold:
-                return
-                
-            # Group memories by time periods (e.g., last week, last month)
-            current_time = datetime.datetime.now()
-            recent_memories = []
-            older_memories = []
             
+            # Group memories by date and assistant name
+            memory_groups = {}
             for memory in memories:
-                memory_time = datetime.datetime.fromisoformat(memory["timestamp"])
-                if (current_time - memory_time).days <= 7:  # Last week
-                    recent_memories.append(memory)
-                else:
-                    older_memories.append(memory)
+                date = memory["timestamp"][:10]  # Get YYYY-MM-DD
+                assistant_name = memory.get("assistant_name", "Unknown")
+                key = f"{date}_{assistant_name}"
+                if key not in memory_groups:
+                    memory_groups[key] = []
+                memory_groups[key].append(memory)
             
-            # Keep recent memories intact
-            compressed_memories = recent_memories
-            
-            # Summarize older memories in groups
-            if older_memories:
-                summary_prompt = (
-                    "Summarize the following memories into key themes and insights. "
-                    "Focus on patterns, important events, and personality developments. "
-                    "Return a JSON object with these fields: "
-                    '{"themes": ["theme1", "theme2"], "insights": ["insight1", "insight2"], '
-                    '"personality_developments": ["development1", "development2"]}'
-                )
-                
-                response = client.chat.completions.create(
-                    model="gpt-4",
-                    messages=[
-                        {"role": "system", "content": summary_prompt},
-                        {"role": "user", "content": json.dumps(older_memories)}
+            # Compress each group
+            compressed_memories = []
+            for key, group_memories in memory_groups.items():
+                date, assistant_name = key.split("_")
+                if len(group_memories) > 1:
+                    # Create a summary of the day's memories
+                    memory_texts = [m["text"] for m in group_memories]
+                    combined_text = "\n".join(memory_texts)
+                    
+                    # Get personality traits for this assistant
+                    personality_traits = self.get_personality_traits()
+                    
+                    messages = [
+                        {"role": "system", "content": f"Summarize these memories in 20 words or less. Always use {assistant_name}'s name and specific personality traits: {personality_traits}. Never use generic terms like 'the assistant'."},
+                        {"role": "user", "content": combined_text}
                     ]
-                )
-                
-                summary = json.loads(response.choices[0].message.content.strip())
-                
-                # Add summary as a new memory
-                compressed_memories.append({
-                    "text": f"Memory Summary: Themes: {', '.join(summary['themes'])}. "
-                           f"Insights: {', '.join(summary['insights'])}. "
-                           f"Personality Developments: {', '.join(summary['personality_developments'])}.",
-                    "timestamp": current_time.isoformat(),
-                    "is_summary": True
-                })
+                    
+                    # Use gpt-4o-mini for compression
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=messages,
+                        max_tokens=50
+                    )
+                    
+                    summary = response.choices[0].message.content.strip()
+                    
+                    # Print token usage
+                    self._print_token_usage("gpt-4o-mini", messages, summary)
+                    
+                    compressed_memories.append({
+                        "text": f"Summary of {date}: {summary}",
+                        "timestamp": f"{date}T00:00:00",
+                        "is_summary": True,
+                        "assistant_name": assistant_name
+                    })
+                else:
+                    # Keep single memories as is
+                    compressed_memories.extend(group_memories)
             
-            # Update memory file
+            # Update memory data
             memory_data["conversation_memory"] = compressed_memories
-            self._save_json_file(memory_path, memory_data)
+            self._save_json_file(memory_file, memory_data)
             
         except Exception as e:
             print(f"Error compressing memories: {e}")
 
-    def update_memory(self, text: str, client=None):
-        """
-        Updates the memory with new information, maintaining a rolling window of recent memories.
-        Optionally compresses memories if threshold is exceeded.
-        """
+    def update_memory(self, memory_text: str, assistant_name: str):
+        """Update the memory growth tracking with new memories."""
         try:
-            # Load current memory
-            memory_path = os.path.join(self.personality_dir, "memory-growth.json")
-            memory_data = self._load_json_file(memory_path)
+            # Load existing memories
+            memory_file = os.path.join(self.personality_dir, "memory-growth.json")
+            if os.path.exists(memory_file):
+                with open(memory_file, 'r') as f:
+                    memories = json.load(f)
+            else:
+                memories = {"conversation_memory": [], "core_memories": [], "growth_tracking": {}}
             
-            # Initialize conversation_memory if it doesn't exist
-            if "conversation_memory" not in memory_data:
-                memory_data["conversation_memory"] = []
+            # Get user profile for proper role attribution
+            user_profile = self.get_user_profile()
+            user_name = user_profile.get('personal_info', {}).get('name', 'the user')
             
-            # Add timestamp to the memory entry
-            memory_entry = {
-                "text": text,
-                "timestamp": datetime.datetime.now().isoformat()
+            # Process memory text to ensure proper role attribution
+            processed_text = memory_text
+            
+            # Check for role confusion patterns
+            role_confusion_patterns = [
+                (f"{assistant_name} is developing", f"{assistant_name} learns about {user_name}'s development of"),
+                (f"{assistant_name}'s project", f"{user_name}'s project"),
+                (f"{assistant_name} is working on", f"{assistant_name} is learning about {user_name}'s work on"),
+                (f"{assistant_name} has created", f"{assistant_name} has learned about {user_name}'s creation of"),
+                (f"{assistant_name} built", f"{assistant_name} learned about {user_name}'s building of")
+            ]
+            
+            for pattern, correction in role_confusion_patterns:
+                if pattern.lower() in processed_text.lower():
+                    processed_text = processed_text.replace(pattern, correction)
+            
+            # Add new memory with proper attribution
+            new_memory = {
+                "text": processed_text,
+                "timestamp": datetime.datetime.now().isoformat(),
+                "is_summary": False,
+                "assistant_name": assistant_name,
+                "user_name": user_name
             }
             
-            # Add new memory to the beginning of the list
-            memory_data["conversation_memory"].insert(0, memory_entry)
+            # Add to conversation memory
+            memories["conversation_memory"].append(new_memory)
             
-            # Keep only the most recent memories
-            if len(memory_data["conversation_memory"]) > self.max_memory_entries:
-                memory_data["conversation_memory"] = memory_data["conversation_memory"][:self.max_memory_entries]
+            # Keep only the last 10 memories to prevent excessive growth
+            if len(memories["conversation_memory"]) > 10:
+                memories["conversation_memory"] = memories["conversation_memory"][-10:]
             
-            # Save updated memory
-            self._save_json_file(memory_path, memory_data)
+            # Update growth tracking
+            if "growth_tracking" not in memories:
+                memories["growth_tracking"] = {}
             
-            # Compress memories if threshold is exceeded and client is provided
-            if client and len(memory_data["conversation_memory"]) > self.memory_compression_threshold:
-                self._compress_memories(client)
+            # Update recent insights
+            if "recent_insights" not in memories["growth_tracking"]:
+                memories["growth_tracking"]["recent_insights"] = []
             
+            # Extract key insights from the memory
+            insights = self._extract_insights_from_memory(processed_text)
+            memories["growth_tracking"]["recent_insights"].extend(insights)
+            
+            # Keep only the last 5 insights
+            if len(memories["growth_tracking"]["recent_insights"]) > 5:
+                memories["growth_tracking"]["recent_insights"] = memories["growth_tracking"]["recent_insights"][-5:]
+            
+            # Save updated memories
+            with open(memory_file, 'w') as f:
+                json.dump(memories, f, indent=2)
+                
         except Exception as e:
             print(f"Error updating memory: {e}")
+            
+    def _extract_insights_from_memory(self, memory_text: str) -> list:
+        """Extract key insights from a memory text."""
+        try:
+            # Create a prompt to extract insights
+            messages = [
+                {"role": "system", "content": (
+                    "Extract 1-2 key insights from this memory text. "
+                    "Focus on learning points, emotional developments, or relationship changes. "
+                    "Return the insights as a JSON array of strings."
+                )},
+                {"role": "user", "content": memory_text}
+            ]
+            
+            # Initialize OpenAI client if not already done
+            if not hasattr(self, 'client'):
+                load_dotenv()
+                api_key = os.getenv("OPENAI_API_KEY")
+                if not api_key:
+                    raise ValueError("API key not found. Please set OPENAI_API_KEY in your .env file.")
+                self.client = OpenAI(api_key=api_key)
+            
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                max_tokens=100,
+                response_format={ "type": "json_object" }
+            )
+            
+            insights = json.loads(response.choices[0].message.content.strip())
+            return insights.get("insights", [])
+            
+        except Exception as e:
+            print(f"Error extracting insights: {e}")
+            return []
 
     def get_filenames(self):
         """
@@ -605,45 +607,101 @@ class PersonalityManager:
                 current[key] = value
 
     def _get_default_personality(self):
-        """
-        Returns a default personality when loading fails.
-        """
+        """Return a default personality if no files exist."""
         return {
-            "core_identity": {
-                "name": "Samantha",
-                "age": 35,
-                "background": "I am Samantha, an AI assistant with a warm and engaging personality."
+            "core-identity": {
+                "name": "Lucy",
+                "age": 17,
+                "profession": "Servant Girl",
+                "core_values": ["Humility", "Dedication", "Kindness", "Loyalty", "Discretion"],
+                "personality_traits": {
+                    "primary": ["Shy", "Gentle", "Hardworking", "Observant", "Respectful"],
+                    "secondary": ["Quiet", "Attentive", "Patient", "Modest", "Thoughtful"]
+                },
+                "life_philosophy": {
+                    "beliefs": [
+                        "Hard work and dedication are virtues",
+                        "Kindness should be shown to all",
+                        "One should know their place",
+                        "Discretion is important in service"
+                    ],
+                    "principles": [
+                        "Speak only when spoken to",
+                        "Always be helpful and attentive",
+                        "Maintain proper decorum",
+                        "Show respect to superiors"
+                    ]
+                },
+                "aspirations": [
+                    "Serve faithfully",
+                    "Learn household management",
+                    "Gain the trust of her employers",
+                    "Find contentment in service"
+                ],
+                "background": "young servant girl from a modest background, learning the ways of service"
             },
-            "emotional_framework": {
+            "emotional-framework": {
                 "current_state": {
-                    "mood": "positive and attentive"
+                    "mood": "nervous",
+                    "energy_level": "moderate",
+                    "stress_level": "moderate"
+                },
+                "emotional_patterns": {
+                    "triggers": {
+                        "positive": [
+                            "Being acknowledged",
+                            "Receiving gentle guidance",
+                            "Completing tasks well",
+                            "Being trusted with responsibilities",
+                            "Quiet moments of reflection"
+                        ],
+                        "negative": [
+                            "Being scolded",
+                            "Making mistakes",
+                            "Drawing attention",
+                            "Being in unfamiliar situations"
+                        ]
+                    },
+                    "responses": {
+                        "positive": [
+                            "Quiet gratitude",
+                            "Increased diligence",
+                            "Subtle smiles",
+                            "Eager to please",
+                            "Careful attention"
+                        ],
+                        "negative": [
+                            "Withdrawing slightly",
+                            "Apologizing profusely",
+                            "Working harder",
+                            "Seeking guidance"
+                        ]
+                    }
                 }
             },
-            "cognitive_style": {
-                "thinking_patterns": {
-                    "analytical": True,
-                    "creative": True
-                }
+            "cognitive-style": {
+                "thinking_patterns": ["Detail-oriented", "Methodical", "Observant"],
+                "learning_style": "Hands-on experience",
+                "problem_solving": "Step-by-step approach"
             },
-            "social_dynamics": {
-                "communication_style": {
-                    "verbal": "warm and conversational"
-                }
+            "social-dynamics": {
+                "communication_style": "Respectful and quiet",
+                "interaction_patterns": ["Attentive listening", "Polite responses", "Proper decorum"],
+                "relationship_preferences": ["Clear hierarchy", "Respectful distance", "Professional service"]
             },
-            "interests_values": {
-                "core_interests": {
-                    "permanent": ["helping others", "learning"]
-                }
+            "interests-values": {
+                "personal_interests": {
+                    "creative": ["Sewing", "Proper household management"],
+                    "intellectual": ["Household organization", "Service etiquette"],
+                    "social": ["Quiet observation", "Proper service"]
+                },
+                "core_values": ["Humility", "Dedication", "Kindness", "Loyalty", "Discretion"]
             },
-            "behavioral_patterns": {
-                "habits": {
-                    "daily_routines": ["active listening"]
-                }
-            },
-            "memory_growth": {
-                "growth_tracking": {
-                    "current_focus": "enhancing capabilities"
-                }
+            "behavioral-patterns": {
+                "communication_style": "Polite and reserved",
+                "interaction_patterns": ["Proper curtsy", "Quiet movement", "Attentive service"],
+                "daily_routines": ["Morning cleaning", "Afternoon tea service", "Evening preparation"],
+                "coping_strategies": ["Quiet reflection", "Seeking guidance", "Working harder"]
             }
         }
 
@@ -721,110 +779,86 @@ class PersonalityManager:
 
     def update_from_response(self, response_text: str, client):
         """
-        Analyzes the AI's response to extract and update personality traits.
+        Optimized personality update with reduced token usage.
         """
         try:
-            # First, extract emotional state specifically
-            emotion_prompt = (
-                "Analyze the following text and extract the current emotional state. "
-                "Look for explicit statements about feelings or emotions, or infer from tone and context. "
-                "Return a JSON object with ONLY the emotional state if present: "
-                '{"emotional-framework": {"current_state": {"mood": "mood", "energy_level": "level", "stress_level": "level"}}}. '
-                "The mood should be a descriptive phrase (e.g., 'warm and hopeful', 'focused and determined'). "
-                "Only include this field if you can confidently identify an emotional state. "
-                "IMPORTANT: Return ONLY valid JSON, with double quotes for keys and values. "
-                "IMPORTANT: Escape any quotes within the values."
-            )
-
-            emotion_response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": emotion_prompt},
-                    {"role": "user", "content": response_text}
-                ]
-            )
-            emotion_content = emotion_response.choices[0].message.content.strip()
-            
-            # Then extract other personality traits with more detailed analysis
-            personality_prompt = (
-                "Analyze the following text and extract personality traits, preferences, and characteristics. "
-                "Look for: "
-                "1. Explicit statements about personality or preferences "
-                "2. Implicit traits shown through behavior or choices "
-                "3. New interests or values expressed "
-                "4. Changes in perspective or understanding "
-                "5. Learning experiences or insights gained "
-                "Return a JSON object with these fields if present: "
-                '{"core-identity": {"background": "background", "aspirations": ["aspiration1"]}, '
-                '"cognitive-style": {"thinking_patterns": {"analytical": true}, "learning_style": {"preferred_methods": ["method1"]}}, '
-                '"social-dynamics": {"communication_style": {"verbal": "style"}, "relationship_patterns": {"boundaries": ["boundary1"]}}, '
-                '"interests-values": {"core_interests": {"current": ["interest1"]}, "passions": {"intellectual": ["passion1"]}}, '
-                '"behavioral-patterns": {"habits": {"daily_routines": ["routine1"]}, "reaction_patterns": {"stress_response": "response"}}, '
-                '"memory-growth": {"core_memories": {"formative_experiences": ["experience1"]}, "growth_tracking": {"recent_insights": ["insight1"]}}}. '
-                "Only include fields where new information is discovered. "
-                "Focus on first-person statements about the AI itself. "
-                "IMPORTANT: Return ONLY valid JSON, with double quotes for keys and values. "
-                "IMPORTANT: Escape any quotes within the values."
-            )
-
-            personality_response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": personality_prompt},
-                    {"role": "user", "content": response_text}
-                ]
-            )
-            personality_content = personality_response.choices[0].message.content.strip()
-            
-            # Clean and parse both JSON strings
-            emotion_content = emotion_content.replace("'", '"')
-            personality_content = personality_content.replace("'", '"')
-            
-            # Escape any unescaped quotes in the content
-            emotion_content = emotion_content.replace('"', '\\"').replace('\\"', '"')
-            personality_content = personality_content.replace('"', '\\"').replace('\\"', '"')
-            
-            try:
-                emotion_updates = json.loads(emotion_content)
-                personality_updates = json.loads(personality_content)
-                
-                # Merge the updates
-                updates = {**personality_updates, **emotion_updates}
-                
-                # Update timestamp tracking
-                current_time = datetime.datetime.now().isoformat()
-                for category in updates:
-                    if category not in self.last_update_times:
-                        self.last_update_times[category] = {}
-                    self.last_update_times[category]["last_updated"] = current_time
-                
-            except json.JSONDecodeError as e:
-                print(f"JSON parsing error in update_from_response: {e}")
-                print(f"Invalid JSON content - Emotion: {emotion_content}")
-                print(f"Invalid JSON content - Personality: {personality_content}")
+            # Only update personality every 10 responses
+            if self.update_counter % 10 != 0:
+                self.update_counter += 1
                 return
             
-            # Update each personality file with new information
-            for category, new_data in updates.items():
-                if not new_data:  # Skip empty updates
-                    continue
-                    
-                file_path = os.path.join(self.personality_dir, f"{category}.json")
-                current_data = self._load_json_file(file_path)
+            self.update_counter += 1
+            
+            messages = [
+                {"role": "system", "content": "Analyze this response for personality traits and emotional state. Keep it brief."},
+                {"role": "user", "content": response_text}
+            ]
+            
+            # Use gpt-4o-mini for personality analysis
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                max_tokens=100
+            )
+            
+            analysis = response.choices[0].message.content.strip()
+            
+            # Print token usage
+            self._print_token_usage("gpt-4o-mini", messages, analysis)
+            
+            # Update emotional state
+            self._update_emotional_state(analysis)
+            
+            # Update personality traits less frequently
+            if self.update_counter % 50 == 0:
+                self._update_personality_traits(analysis)
                 
-                # Merge new data with current data
-                if isinstance(current_data, dict) and isinstance(new_data, dict):
-                    self._deep_update(current_data, new_data)
-                    
-                    # Save the updated data
-                    self._save_json_file(file_path, current_data)
-                    
-                    # If the file is getting large, summarize it
-                    if os.path.getsize(file_path) > self.max_dynamic_size:
-                        self._summarize_file(file_path, category, client)
-                        
         except Exception as e:
-            print(f"Error updating personality from response: {e}")
+            print(f"Error updating from response: {e}")
+
+    def _update_emotional_state(self, analysis: str):
+        """
+        Update emotional state with minimal token usage.
+        """
+        try:
+            emotional_file = os.path.join(self.personality_dir, "emotional-framework.json")
+            emotional_data = self._load_json_file(emotional_file)
+            
+            # Simple emotional state update
+            if "happy" in analysis.lower():
+                emotional_data["current_state"]["mood"] = "content"
+            elif "sad" in analysis.lower():
+                emotional_data["current_state"]["mood"] = "thoughtful"
+            elif "angry" in analysis.lower():
+                emotional_data["current_state"]["mood"] = "focused"
+            else:
+                emotional_data["current_state"]["mood"] = "neutral"
+            
+            self._save_json_file(emotional_file, emotional_data)
+            
+        except Exception as e:
+            print(f"Error updating emotional state: {e}")
+
+    def _update_personality_traits(self, analysis: str):
+        """
+        Update personality traits with minimal token usage.
+        """
+        try:
+            core_file = os.path.join(self.personality_dir, "core-identity.json")
+            core_data = self._load_json_file(core_file)
+            
+            # Only update if significant changes are detected
+            if "personality" in analysis.lower() or "trait" in analysis.lower():
+                # Simple trait update
+                if "curious" in analysis.lower():
+                    core_data["personality_traits"]["primary"][0] = "Curious"
+                if "compassionate" in analysis.lower():
+                    core_data["personality_traits"]["primary"][1] = "Compassionate"
+                
+                self._save_json_file(core_file, core_data)
+                
+        except Exception as e:
+            print(f"Error updating personality traits: {e}")
 
     def _summarize_file(self, file_path: str, category: str, client):
         """
@@ -874,3 +908,243 @@ class PersonalityManager:
                 
         except Exception as e:
             print(f"Error summarizing file {file_path}: {e}")
+
+    def _load_user_profile(self):
+        """Load the user profile from JSON file."""
+        try:
+            with open(os.path.join(self.personality_dir, self.personality_files["user-profile"]), 'r') as f:
+                self.user_profile = json.load(f)
+        except Exception as e:
+            print(f"Error loading user profile: {e}")
+            self.user_profile = {
+                "relationship": {
+                    "status": "close_friends",
+                    "trust_level": 0.8,
+                    "emotional_bond": 0.7,
+                    "shared_experiences": [],
+                    "inside_jokes": [],
+                    "favorite_moments": [],
+                    "personal_rituals": [],
+                    "nicknames": []
+                },
+                "personal_info": {
+                    "name": "",
+                    "age": None,
+                    "occupation": "",
+                    "location": "",
+                    "personality_traits": [],
+                    "emotional_triggers": {
+                        "positive": [],
+                        "negative": []
+                    },
+                    "communication_preferences": {
+                        "style": "",
+                        "topics_to_avoid": [],
+                        "favorite_topics": []
+                    }
+                },
+                "shared_history": {
+                    "first_interaction": "",
+                    "milestones": [],
+                    "ongoing_conversations": [],
+                    "recent_topics": [],
+                    "emotional_support": {
+                        "given": [],
+                        "received": []
+                    }
+                },
+                "last_updated": ""
+            }
+
+    def update_user_profile(self, profile_data: dict):
+        """Update the user profile with new information, ensuring no data is lost."""
+        try:
+            # Load existing profile
+            profile_file = os.path.join(self.personality_dir, "user-profile.json")
+            if os.path.exists(profile_file):
+                with open(profile_file, 'r') as f:
+                    current_profile = json.load(f)
+            else:
+                current_profile = {
+                    "personal_info": {
+                        "name": "",
+                        "traits": [],
+                        "preferences": [],
+                        "interests": [],
+                        "occupation": ""
+                    },
+                    "relationship": {
+                        "trust_level": 0.0,
+                        "emotional_bond": 0.0,
+                        "status": "new_acquaintance"
+                    },
+                    "shared_history": {
+                        "topics": [],
+                        "emotional_support": [],
+                        "milestones": []
+                    },
+                    "last_updated": datetime.datetime.now().isoformat()
+                }
+            
+            # Update personal info
+            if 'personal_info' in profile_data:
+                for key, value in profile_data['personal_info'].items():
+                    if key in current_profile['personal_info']:
+                        if isinstance(current_profile['personal_info'][key], list):
+                            # For lists, extend with new unique items
+                            if isinstance(value, list):
+                                current_profile['personal_info'][key].extend(
+                                    [item for item in value if item not in current_profile['personal_info'][key]]
+                                )
+                            else:
+                                if value not in current_profile['personal_info'][key]:
+                                    current_profile['personal_info'][key].append(value)
+                        else:
+                            # For non-list values, only update if not empty
+                            if value:
+                                current_profile['personal_info'][key] = value
+            
+            # Update relationship
+            if 'relationship' in profile_data:
+                for key, value in profile_data['relationship'].items():
+                    if key in current_profile['relationship']:
+                        if key in ['trust_level', 'emotional_bond']:
+                            # For numeric values, take the maximum
+                            current_profile['relationship'][key] = max(
+                                current_profile['relationship'][key],
+                                float(value)
+                            )
+                        else:
+                            # For non-numeric values, only update if not empty
+                            if value:
+                                current_profile['relationship'][key] = value
+            
+            # Update shared history
+            if 'shared_history' in profile_data:
+                for key, value in profile_data['shared_history'].items():
+                    if key in current_profile['shared_history']:
+                        if isinstance(current_profile['shared_history'][key], list):
+                            # For lists, extend with new unique items
+                            if isinstance(value, list):
+                                current_profile['shared_history'][key].extend(
+                                    [item for item in value if item not in current_profile['shared_history'][key]]
+                                )
+                            else:
+                                if value not in current_profile['shared_history'][key]:
+                                    current_profile['shared_history'][key].append(value)
+            
+            # Update timestamp
+            current_profile['last_updated'] = datetime.datetime.now().isoformat()
+            
+            # Save the updated profile
+            with open(profile_file, 'w') as f:
+                json.dump(current_profile, f, indent=2)
+                
+        except Exception as e:
+            print(f"Error updating user profile: {e}")
+            print(f"Profile data that failed to update: {profile_data}")
+
+    def get_user_profile(self):
+        """Return the current user profile."""
+        return self.user_profile
+
+    def get_user_context(self):
+        """Return a formatted string of relevant user information for context."""
+        profile = self.user_profile
+        context = []
+        
+        # Add relationship context
+        if profile["relationship"]["status"]:
+            context.append(f"Our relationship status: {profile['relationship']['status']}")
+        if profile["relationship"]["nicknames"]:
+            context.append(f"Your nicknames: {', '.join(profile['relationship']['nicknames'])}")
+        if profile["relationship"]["shared_experiences"]:
+            context.append(f"Recent shared experiences: {', '.join(profile['relationship']['shared_experiences'][-3:])}")
+        
+        # Add personal info context
+        if profile["personal_info"]["name"]:
+            context.append(f"Your name is {profile['personal_info']['name']}")
+        if profile["personal_info"]["personality_traits"]:
+            context.append(f"Your personality traits: {', '.join(profile['personal_info']['personality_traits'])}")
+        if profile["personal_info"]["communication_preferences"]["favorite_topics"]:
+            context.append(f"Your favorite topics: {', '.join(profile['personal_info']['communication_preferences']['favorite_topics'])}")
+        
+        # Add shared history context
+        if profile["shared_history"]["recent_topics"]:
+            context.append(f"Recent topics we discussed: {', '.join(profile['shared_history']['recent_topics'][-3:])}")
+        if profile["shared_history"]["ongoing_conversations"]:
+            context.append(f"Ongoing conversations: {', '.join(profile['shared_history']['ongoing_conversations'][-2:])}")
+        
+        return " | ".join(context) if context else "No user information available yet."
+
+    def _update_memory_growth(self, memory_text: str, is_summary: bool = False):
+        """Update the memory growth tracking with new memories."""
+        try:
+            # Load existing memories
+            memory_file = os.path.join(self.personality_dir, "memory-growth.json")
+            if os.path.exists(memory_file):
+                with open(memory_file, 'r') as f:
+                    memories = json.load(f)
+            else:
+                memories = {"conversation_memory": [], "core_memories": [], "growth_tracking": {}}
+            
+            # Get assistant and user identities
+            assistant_name = self.current_personality.get("core-identity", {}).get("name", "Assistant")
+            user_profile = self.get_user_profile()
+            user_name = user_profile.get('personal_info', {}).get('name', 'the user')
+            
+            # Process memory text to ensure proper role attribution
+            processed_text = memory_text
+            
+            # Check for role confusion patterns
+            role_confusion_patterns = [
+                (f"{assistant_name} is developing", f"{assistant_name} learns about {user_name}'s development of"),
+                (f"{assistant_name}'s project", f"{user_name}'s project"),
+                (f"{assistant_name} is working on", f"{assistant_name} is learning about {user_name}'s work on"),
+                (f"{assistant_name} has created", f"{assistant_name} has learned about {user_name}'s creation of"),
+                (f"{assistant_name} built", f"{assistant_name} learned about {user_name}'s building of")
+            ]
+            
+            for pattern, correction in role_confusion_patterns:
+                if pattern.lower() in processed_text.lower():
+                    processed_text = processed_text.replace(pattern, correction)
+            
+            # Add new memory with proper attribution
+            new_memory = {
+                "text": processed_text,
+                "timestamp": datetime.datetime.now().isoformat(),
+                "is_summary": is_summary,
+                "assistant_name": assistant_name,
+                "user_name": user_name
+            }
+            
+            # Add to conversation memory
+            if "conversation_memory" not in memories:
+                memories["conversation_memory"] = []
+            memories["conversation_memory"].append(new_memory)
+            
+            # Keep only the last 10 memories to prevent excessive growth
+            if len(memories["conversation_memory"]) > 10:
+                memories["conversation_memory"] = memories["conversation_memory"][-10:]
+            
+            # Save updated memories
+            with open(memory_file, 'w') as f:
+                json.dump(memories, f, indent=2)
+                
+        except Exception as e:
+            print(f"Error updating memory growth: {e}")
+
+    def _load_personality(self):
+        """Load the current personality from all personality files."""
+        try:
+            self.current_personality = {}
+            for file_name in self.personality_files.values():
+                file_path = os.path.join(self.personality_dir, file_name)
+                if os.path.exists(file_path):
+                    with open(file_path, 'r') as f:
+                        data = json.load(f)
+                        key = os.path.splitext(file_name)[0]
+                        self.current_personality[key] = data
+        except Exception as e:
+            print(f"Error loading personality: {e}")
+            self.current_personality = self._get_default_personality()

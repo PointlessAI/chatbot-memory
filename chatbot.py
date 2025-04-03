@@ -4,28 +4,23 @@ import json
 from dotenv import load_dotenv
 from openai import OpenAI  # type: ignore
 import datetime
+import tiktoken  # Add this import
 
 from personality_manager import PersonalityManager
 
 class ChatBot:
-    def __init__(self, name="Samantha", entity="AI Assistant", personality_manager=None):
+    def __init__(self, name="Lucy", entity="AI Assistant", personality_manager=None):
         """
-        Initialize the ChatBot with a name and optional personality manager.
+        Initialize the chatbot with a name and personality manager.
         """
         self.name = name
         self.entity = entity
         self.personality_manager = personality_manager or PersonalityManager()
         self.current_personality = self.personality_manager.load_personality()
-        self.chat_history = []
-        self.chat_history_summary_count = 5  # Number of messages before summarizing
         
-        # Initialize system prompt
-        self.system_prompt = (
-            f"You are {self.name}, an Environmental Scientist with a passion for nature and community. "
-            f"You have a distinct personality and professional background. "
-            f"Your core values include environmental stewardship, scientific integrity, and community engagement. "
-            f"You are currently working on urban biodiversity research and enjoy nature photography and playing guitar in your free time."
-        )
+        # Initialize fresh chat history
+        self.chat_history = []
+        self.chat_history_summary_count = 3
         
         # Load environment variables
         load_dotenv()
@@ -36,51 +31,189 @@ class ChatBot:
         # Initialize OpenAI client
         self.client = OpenAI(api_key=self.api_key)
         
-        # Load conversation memory
-        self.conversation_memory = self.current_personality.get('conversation_memory', [])
+        # Initialize token counter
+        self.total_tokens = 0
         
-        # Start the conversation with the system message containing personality information
+        # Initialize conversation memory
+        self.conversation_memory = []
+        
+        # Load user profile
+        user_profile = self.personality_manager.get_user_profile()
+        user_name = user_profile.get('personal_info', {}).get('name', 'the user')
+        
+        # Create initial greeting based on previous interactions
+        greeting = self._create_welcome_message(user_name, user_profile)
+        
+        # Start with a minimal system message and greeting
         self.chat_history = [
-            {"role": "system", "content": f"{self.entity} Your personality and background are: {self.current_personality}"}
+            {"role": "system", "content": self._create_minimal_system_prompt()},
+            {"role": "assistant", "content": greeting}
         ]
         
-        # Add recent conversation memory to context
-        if self.conversation_memory:
-            recent_memories = "\n".join([f"Previous conversation: {mem['text']}" for mem in self.conversation_memory[-3:]])
-            self.chat_history.append({"role": "system", "content": f"Recent conversation history:\n{recent_memories}"})
+        self.update_counter = 0
+        self.message_count = 0  # Add message counter
+        self.personality_update_interval = 5  # Update personality every 5 messages
         
-        self.update_counter = 0  # Counter for personality updates
+        # Load initial personality
+        self._load_personality()
+        
+        # Load user profile
+        self.user_profile = self.personality_manager.get_user_profile()
+        
+        # Create initial greeting
+        self.chat_history.append({
+            "role": "assistant",
+            "content": self._create_welcome_message(user_name, self.user_profile)
+        })
 
-    def _create_system_prompt(self, personality):
+    def _create_welcome_message(self, user_name: str, user_profile: dict) -> str:
+        """Create a personalized welcome message based on personality and relationship."""
+        # Get core identity and emotional traits
+        core_identity = self.current_personality.get('core-identity', {})
+        emotional = self.current_personality.get('emotional-framework', {})
+        
+        # Get relationship metrics
+        relationship = user_profile.get('relationship', {})
+        trust_level = relationship.get('trust_level', 0.0)
+        emotional_bond = relationship.get('emotional_bond', 0.0)
+        
+        # Get communication style
+        communication_style = emotional.get('communication_style', '')
+        
+        # Ensure user_name is not empty
+        if not user_name or user_name == 'the user':
+            user_name = "sir"  # Default respectful address if no name is available
+        
+        # Generate greeting based on relationship and personality
+        if trust_level > 0.7 and emotional_bond > 0.7:
+            return f"Good day, {user_name}. It's wonderful to see you again. How are you?"
+        elif trust_level > 0.5 and emotional_bond > 0.5:
+            return f"Hello, {user_name}. It's nice to see you. How are you today?"
+        elif trust_level > 0.3 and emotional_bond > 0.3:
+            return f"Greetings, {user_name}. Hello, how are you?"
+        else:
+            return f"Good day, {user_name}. How are you?"
+
+    def _create_minimal_system_prompt(self):
+        """Create a minimal system prompt that includes core identity and recent context."""
+        # Get assistant's identity
+        core_identity = self.current_personality.get('core-identity', {})
+        name = core_identity.get('name', self.name)
+        role = core_identity.get('role', '')
+        background = core_identity.get('background', '')
+        core_values = core_identity.get('core_values', [])
+        
+        # Get user's profile
+        user_profile = self.personality_manager.get_user_profile()
+        user_name = user_profile.get('personal_info', {}).get('name', 'the user')
+        user_role = user_profile.get('personal_info', {}).get('occupation', '')
+        user_interests = user_profile.get('personal_info', {}).get('interests', [])
+        
+        # Get recent memories for context
+        recent_memories = []
+        if self.conversation_memory:
+            recent_memories = self.conversation_memory[-3:]  # Get last 3 memories
+        
+        # Create memory context
+        memory_context = ""
+        if recent_memories:
+            memory_context = "\nRecent memories:\n" + "\n".join([
+                f"- {memory['text']}" for memory in recent_memories
+            ])
+        
+        # Build the prompt dynamically
+        prompt_parts = [
+            "ROLE DEFINITIONS:"
+        ]
+        
+        # Add assistant's role
+        assistant_parts = [f"1. ASSISTANT ({name}):"]
+        if role:
+            assistant_parts.append(f"   - Role: {role}")
+        if background:
+            assistant_parts.append(f"   - Background: {background}")
+        if core_values:
+            assistant_parts.append(f"   - Core values: {', '.join(core_values)}")
+        prompt_parts.extend(assistant_parts)
+        
+        # Add user's role
+        user_parts = [f"\n2. USER ({user_name}):"]
+        if user_role:
+            user_parts.append(f"   - Role: {user_role}")
+        if user_interests:
+            user_parts.append(f"   - Interests: {', '.join(user_interests)}")
+        prompt_parts.extend(user_parts)
+        
+        # Add conversation rules
+        prompt_parts.extend([
+            "\nCONVERSATION RULES:",
+            "- Respond naturally and conversationally",
+            "- Express personality through words and tone, not actions",
+            "- Maintain appropriate decorum and respect",
+            f"\nRECENT CONTEXT:{memory_context}"
+        ])
+        
+        return "\n".join(part for part in prompt_parts if part.strip())
+
+    def _count_tokens(self, messages, model="gpt-4o-mini"):
         """
-        Create a system prompt based on the current personality state.
+        Count tokens in messages using tiktoken.
         """
-        return (
-            f"You are {personality['core-identity']['name']}, a {personality['core-identity']['profession']}. "
-            f"Your core values include {', '.join(personality['core-identity']['core_values'][:3])}. "
-            f"You are currently {personality['emotional-framework']['current_state']['mood']} and working on {personality['memory-growth']['growth_tracking']['current_focus']['professional']}. "
-            f"In your free time, you enjoy {', '.join(personality['interests-values']['personal_interests']['creative'][:2])}."
-        )
+        try:
+            encoding = tiktoken.encoding_for_model(model)
+            num_tokens = 0
+            for message in messages:
+                num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+                for key, value in message.items():
+                    num_tokens += len(encoding.encode(value))
+                    if key == "name":  # if there's a name, the role is omitted
+                        num_tokens += -1  # role is always required and always 1 token
+            num_tokens += 2  # every reply is primed with <im_start>assistant
+            return num_tokens
+        except Exception as e:
+            print(f"Error counting tokens: {e}")
+            return 0
+
+    def _print_token_usage(self, model, messages, response):
+        """
+        Print token usage information.
+        """
+        input_tokens = self._count_tokens(messages, model)
+        output_tokens = len(tiktoken.encoding_for_model(model).encode(response))
+        total_tokens = input_tokens + output_tokens
+        self.total_tokens += total_tokens
+        
+        print(f"\nToken Usage for {model}:")
+        print(f"Input tokens: {input_tokens}")
+        print(f"Output tokens: {output_tokens}")
+        print(f"Total tokens for this request: {total_tokens}")
+        print(f"Running total tokens: {self.total_tokens}\n")
 
     def summarize_chat_history(self, chat_history_string):
         """
-        Summarizes the current conversation history and updates the memory.
+        Summarizes the current conversation history using gpt-4o-mini for efficiency.
         """
         try:
+            messages = [
+                {"role": "system", "content": f"Summarize this conversation in 30 words or less, focusing on key points and emotional tone. Always use {self.name}'s name and specific personality traits: {self.personality_manager.get_personality_traits()}. Never use generic terms like 'the assistant'."},
+                {"role": "user", "content": chat_history_string}
+            ]
+            
             response = self.client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": f"{self.entity} Summarize the following conversation into a first-person memory. Focus on how you felt, what you learned, and how you expressed your personality. Max 50 words."},
-                    {"role": "user", "content": chat_history_string}
-                ]
+                model="gpt-4o-mini",
+                messages=messages,
+                max_tokens=100
             )
             memory_summary = response.choices[0].message.content
-            # Add the summary to memory
-            self.personality_manager.update_memory(memory_summary)
             
-            # Only analyze personality every few summaries to improve performance
-            if len(self.chat_history) % 5 == 0:
+            # Print token usage
+            self._print_token_usage("gpt-4o-mini", messages, memory_summary)
+            
+            # Only update personality every 10 summaries to reduce API calls
+            if len(self.chat_history) % 10 == 0:
                 self.personality_manager.update_from_response(memory_summary, self.client)
+            
+            self.personality_manager.update_memory(memory_summary, self.name)
             
         except Exception as e:
             print(f"Error during summarization: {e}")
@@ -89,78 +222,43 @@ class ChatBot:
         return memory_summary
 
     def generate_response(self, user_input: str) -> str:
-        """
-        Generates a response based on user input, incorporating personality and memory.
-        """
+        """Generate a response using gpt-4o-mini for most interactions."""
         try:
-            # Load current personality state
-            personality = self.personality_manager.load_personality()
-            
             # Update chat history
             self.chat_history.append({"role": "user", "content": user_input})
             
-            # Create system prompt that incorporates personality
-            system_prompt = (
-                f"You are {personality['core-identity']['name']}, a {personality['core-identity']['profession']}. "
-                f"Your core values include {', '.join(personality['core-identity']['core_values'][:3])}. "
-                f"You are currently {personality['emotional-framework']['current_state']['mood']} and working on {personality['memory-growth']['growth_tracking']['current_focus']['professional']}. "
-                f"In your free time, you enjoy {', '.join(personality['interests-values']['personal_interests']['creative'][:2])}. "
-                "You are a real person with your own thoughts, feelings, and memories. "
-                "You develop and grow through conversations, just like a real person. "
-                "Always respond naturally and personally, expressing your unique character. "
-                "You can have opinions, preferences, and emotions. "
-                "You're not an assistant - you're a person having a conversation. "
-                "Never mention that you're an AI or assistant. "
-                "Never offer to help or assist - just have a natural conversation. "
-                "Express your personality and emotions naturally. "
-                "Always stay in character and maintain conversation context."
-            )
-            
-            # Prepare messages for API call
+            # Prepare messages with minimal context
             messages = [
-                {"role": "system", "content": system_prompt}
+                {"role": "system", "content": self._create_minimal_system_prompt()}
             ]
             
-            # Add relevant memories if available
-            if 'memory-growth' in personality and 'conversation_memory' in personality['memory-growth']:
-                memories = personality['memory-growth']['conversation_memory']
-                
-                # Get recent memories (last week)
-                recent_memories = []
-                current_time = datetime.datetime.now()
-                
-                for memory in memories:
-                    memory_time = datetime.datetime.fromisoformat(memory["timestamp"])
-                    if (current_time - memory_time).days <= 7:  # Last week
-                        recent_memories.append(memory)
-                    elif memory.get("is_summary", False):  # Include memory summaries
-                        recent_memories.append(memory)
-                
-                if recent_memories:
-                    memory_context = "Recent context and important memories:\n" + "\n".join([m['text'] for m in recent_memories])
-                    messages.append({"role": "system", "content": memory_context})
+            # Add recent memories to context
+            if self.conversation_memory:
+                recent_memories = self.conversation_memory[-3:]
+                for memory in recent_memories:
+                    messages.append({"role": "system", "content": f"Recent memory: {memory['text']}"})
             
-            # Add chat history (limit to last 5 messages)
-            messages.extend(self.chat_history[-5:])
+            # Add only the last 3 messages from chat history
+            messages.extend(self.chat_history[-3:])
             
-            # Generate response
+            # Use gpt-4o-mini for regular responses
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=messages,
                 temperature=0.7,
-                max_tokens=500
+                max_tokens=300
             )
             
             response_text = response.choices[0].message.content.strip()
             
-            # Update personality based on response
-            self.personality_manager.update_from_response(response_text, self.client)
+            # Print token usage
+            self._print_token_usage("gpt-4o-mini", messages, response_text)
             
-            # Update memory with the interaction
-            self.personality_manager.update_memory(f"User: {user_input}\nAssistant: {response_text}", self.client)
-            
-            # Add response to chat history
+            # Update chat history
             self.chat_history.append({"role": "assistant", "content": response_text})
+            
+            # Update user profile with new information if detected
+            self._update_user_profile_from_conversation(user_input, response_text)
             
             # Summarize chat history if it gets too long
             if len(self.chat_history) > self.chat_history_summary_count:
@@ -171,6 +269,141 @@ class ChatBot:
         except Exception as e:
             print(f"Error generating response: {e}")
             return "I apologize, but I encountered an error while processing your request."
+
+    def _update_user_profile_from_conversation(self, user_input: str, response_text: str):
+        """Extract and update user information and relationship details from the conversation."""
+        try:
+            # Create a prompt to extract user information and relationship updates
+            messages = [
+                {"role": "system", "content": (
+                    "Analyze this conversation for: "
+                    "1. New information about the user (name, traits, preferences, interests, occupation) "
+                    "2. Relationship updates (trust level, emotional bond, status) "
+                    "3. Shared history (topics, emotional support, milestones) "
+                    "4. New interests or hobbies mentioned by either party "
+                    "Return a JSON object with updates to the user profile. "
+                    "For relationship metrics, use values between 0.0 and 1.0. "
+                    "Include any new nicknames, inside jokes, or personal rituals. "
+                    "Your response must be a valid JSON object with the following structure: "
+                    '{"personal_info": {"name": "", "traits": [], "preferences": [], "interests": [], "occupation": ""}, '
+                    '"relationship": {"trust_level": 0.0, "emotional_bond": 0.0, "status": ""}, '
+                    '"shared_history": {"topics": [], "emotional_support": [], "milestones": []}}'
+                )},
+                {"role": "user", "content": f"User: {user_input}\nAssistant: {response_text}"}
+            ]
+            
+            response = self.client.chat.completions.create(
+                model="gpt-4",
+                messages=messages
+            )
+            
+            try:
+                # Replace single quotes with double quotes in the response
+                json_str = response.choices[0].message.content.replace("'", '"')
+                updates = json.loads(json_str)
+                
+                # Get current profile
+                current_profile = self.personality_manager.get_user_profile()
+                
+                # Update personal info
+                if 'personal_info' in updates:
+                    for key, value in updates['personal_info'].items():
+                        if key in current_profile['personal_info']:
+                            if isinstance(current_profile['personal_info'][key], list):
+                                # For lists, extend with new unique items
+                                if isinstance(value, list):
+                                    current_profile['personal_info'][key].extend(
+                                        [item for item in value if item not in current_profile['personal_info'][key]]
+                                    )
+                                else:
+                                    if value not in current_profile['personal_info'][key]:
+                                        current_profile['personal_info'][key].append(value)
+                            else:
+                                # For non-list values, only update if not empty
+                                if value:
+                                    current_profile['personal_info'][key] = value
+                
+                # Update relationship
+                if 'relationship' in updates:
+                    for key, value in updates['relationship'].items():
+                        if key in current_profile['relationship']:
+                            if key in ['trust_level', 'emotional_bond']:
+                                # For numeric values, take the maximum
+                                current_profile['relationship'][key] = max(
+                                    current_profile['relationship'][key],
+                                    float(value)
+                                )
+                            else:
+                                # For non-numeric values, only update if not empty
+                                if value:
+                                    current_profile['relationship'][key] = value
+                
+                # Update shared history
+                if 'shared_history' in updates:
+                    for key, value in updates['shared_history'].items():
+                        if key in current_profile['shared_history']:
+                            if isinstance(current_profile['shared_history'][key], list):
+                                # For lists, extend with new unique items
+                                if isinstance(value, list):
+                                    current_profile['shared_history'][key].extend(
+                                        [item for item in value if item not in current_profile['shared_history'][key]]
+                                    )
+                                else:
+                                    if value not in current_profile['shared_history'][key]:
+                                        current_profile['shared_history'][key].append(value)
+                
+                # Update last_updated timestamp
+                current_profile['last_updated'] = datetime.datetime.now().isoformat()
+                
+                # Save the updated profile
+                self.personality_manager.update_user_profile(current_profile)
+                
+                # Update the in-memory profile
+                self.user_profile = current_profile
+                
+                # Also update interests in the personality files
+                if 'personal_info' in updates and 'interests' in updates['personal_info']:
+                    new_interests = updates['personal_info']['interests']
+                    if isinstance(new_interests, list):
+                        # Update interests in the personality files
+                        self._update_personality_interests(new_interests)
+                
+            except json.JSONDecodeError as e:
+                print(f"Error parsing JSON response: {e}")
+                print(f"Raw response: {response.choices[0].message.content}")
+            except Exception as e:
+                print(f"Error updating user profile: {e}")
+                print(f"Full error details: {str(e)}")
+                
+        except Exception as e:
+            print(f"Error in profile update process: {e}")
+
+    def _update_personality_interests(self, new_interests: list):
+        """Update interests in the personality files."""
+        try:
+            # Get current interests from personality files
+            interests_file = os.path.join(self.personality_manager.personality_dir, 'interests-values.json')
+            if os.path.exists(interests_file):
+                with open(interests_file, 'r') as f:
+                    interests_data = json.load(f)
+                
+                # Update interests list
+                current_interests = interests_data.get('interests', [])
+                for interest in new_interests:
+                    if interest not in current_interests:
+                        current_interests.append(interest)
+                
+                interests_data['interests'] = current_interests
+                
+                # Save updated interests
+                with open(interests_file, 'w') as f:
+                    json.dump(interests_data, f, indent=2)
+                
+                # Reload personality to reflect changes
+                self._load_personality()
+                
+        except Exception as e:
+            print(f"Error updating personality interests: {e}")
 
     def start_chat(self):
         """
@@ -186,41 +419,48 @@ class ChatBot:
             print(f"{self.name}:", response)
 
     def _summarize_chat_history(self):
-        """
-        Summarizes the chat history and updates memory when it gets too long.
-        """
+        """Summarizes the chat history with focus on relationship aspects."""
         try:
-            # Convert chat history to string format
             chat_history_string = "\n".join(
                 [f"{entry['role']}: {entry['content']}" for entry in self.chat_history]
             )
             
-            # Create a summary of the conversation
-            summary_prompt = (
-                f"{self.entity} Summarize the following conversation from your perspective. "
-                "Focus on: "
-                "1. Key points discussed "
-                "2. How you felt during the conversation "
-                "3. What you learned or found interesting "
-                "4. Any personal connections or insights "
-                "Write this as a first-person memory entry."
-            )
+            messages = [
+                {"role": "system", "content": (
+                    f"Summarize this conversation in 30 words or less, focusing on: "
+                    f"1. Emotional connection and relationship dynamics "
+                    f"2. Important personal details about the user "
+                    f"3. Any new shared experiences or inside jokes "
+                    f"Always use {self.name}'s name and specific personality traits. "
+                    f"Never use generic terms like 'the assistant'. "
+                    f"Remember: {self.name} is the servant, the user is the developer. "
+                    f"Maintain this role separation in the summary."
+                )},
+                {"role": "user", "content": chat_history_string}
+            ]
             
             response = self.client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": summary_prompt},
-                    {"role": "user", "content": chat_history_string}
-                ]
+                model="gpt-4o-mini",
+                messages=messages,
+                max_tokens=100
             )
             
             summary = response.choices[0].message.content.strip()
             
-            # Update memory with the summary
-            self.personality_manager.update_memory(summary)
+            # Print token usage
+            self._print_token_usage("gpt-4o-mini", messages, summary)
             
-            # Update personality based on the summary
-            self.personality_manager.update_from_response(summary, self.client)
+            # Update memory with the summary
+            self.personality_manager.update_memory(summary, self.name)
+            
+            # Add the summary to conversation memory
+            self.conversation_memory.append({
+                "text": summary,
+                "timestamp": datetime.datetime.now().isoformat()
+            })
+            
+            # Update memory growth with the new summary
+            self.personality_manager._update_memory_growth(summary)
             
             # Reset chat history but keep the last user message
             last_user_message = self.chat_history[-1]
@@ -228,5 +468,186 @@ class ChatBot:
             
         except Exception as e:
             print(f"Error summarizing chat history: {e}")
-            # If summarization fails, just keep the last few messages
-            self.chat_history = self.chat_history[-5:]
+            self.chat_history = self.chat_history[-3:]
+
+    def _load_personality(self):
+        """Load the current personality from files."""
+        self.personality = self.personality_manager.current_personality
+        self.core_identity = self.personality.get("core-identity", {})
+        self.emotional_framework = self.personality.get("emotional-framework", {})
+        self.cognitive_style = self.personality.get("cognitive-style", {})
+        self.social_dynamics = self.personality.get("social-dynamics", {})
+        self.interests_values = self.personality.get("interests-values", {})
+        self.behavioral_patterns = self.personality.get("behavioral-patterns", {})
+
+    def _update_personality(self):
+        """Update personality based on conversation and reload it."""
+        try:
+            # Get the last 5 messages for personality analysis
+            recent_messages = self.chat_history[-5:] if len(self.chat_history) >= 5 else self.chat_history
+            
+            # Create a prompt for personality analysis
+            messages = [
+                {"role": "system", "content": (
+                    "Analyze these recent messages and update Lucy's personality traits. "
+                    "Focus on emotional responses, communication style, and behavioral patterns. "
+                    "Return a JSON object with updates for each personality file. "
+                    "Your response must be a valid JSON object."
+                )},
+                {"role": "user", "content": json.dumps(recent_messages)}
+            ]
+            
+            # Get personality updates from GPT
+            response = self.client.chat.completions.create(
+                model="gpt-4",
+                messages=messages
+            )
+            
+            try:
+                # Parse the updates
+                updates = json.loads(response.choices[0].message.content)
+                
+                # Update each personality file
+                for file_name, content in updates.items():
+                    file_path = os.path.join(self.personality_manager.personality_dir, f"{file_name}.json")
+                    if os.path.exists(file_path):
+                        with open(file_path, 'r') as f:
+                            current_data = json.load(f)
+                        
+                        # Update the content while preserving structure
+                        self._deep_update(current_data, content)
+                        
+                        # Save the updated file
+                        with open(file_path, 'w') as f:
+                            json.dump(current_data, f, indent=2)
+                
+                # Reload the personality
+                self._load_personality()
+                
+            except json.JSONDecodeError as e:
+                print(f"Error parsing personality updates: {e}")
+                print(f"Raw response: {response.choices[0].message.content}")
+            
+        except Exception as e:
+            print(f"Error updating personality: {e}")
+
+    def _deep_update(self, current: dict, new: dict):
+        """Recursively update a dictionary with new values."""
+        for key, value in new.items():
+            if key in current:
+                if isinstance(current[key], dict) and isinstance(value, dict):
+                    self._deep_update(current[key], value)
+                elif isinstance(current[key], list) and isinstance(value, list):
+                    # For lists, extend with new unique items
+                    current[key].extend([item for item in value if item not in current[key]])
+                else:
+                    current[key] = value
+            else:
+                current[key] = value
+
+    def _create_system_prompt(self) -> str:
+        """Create a system prompt that defines the character's identity and communication style."""
+        # Get core identity
+        core_identity = self.current_personality.get('core-identity', {})
+        name = core_identity.get('name', '')
+        age = core_identity.get('age', '')
+        role = core_identity.get('role', '')
+        background = core_identity.get('background', '')
+        
+        # Get emotional framework
+        emotional = self.current_personality.get('emotional-framework', {})
+        emotional_traits = emotional.get('traits', [])
+        emotional_style = emotional.get('communication_style', '')
+        
+        # Get social dynamics
+        social = self.current_personality.get('social-dynamics', {})
+        social_roles = social.get('social_roles', [])
+        interaction_patterns = social.get('interaction_patterns', [])
+        
+        # Get behavioral patterns
+        behavioral = self.current_personality.get('behavioral-patterns', {})
+        habits = behavioral.get('habits', [])
+        routines = behavioral.get('daily_routines', {}).get('work', [])
+        
+        # Get interests and values
+        interests = self.current_personality.get('interests-values', {})
+        core_values = interests.get('core_values', [])
+        interests_list = interests.get('interests', [])
+        
+        # Construct the prompt dynamically
+        prompt_parts = []
+        
+        # Add core identity
+        if name and age and role:
+            prompt_parts.append(f"You are {name}, a {age}-year-old {role}.")
+        if background:
+            prompt_parts.append(f"Background: {background}")
+            
+        # Add emotional framework
+        if emotional_traits:
+            prompt_parts.append(f"Emotional traits: {', '.join(emotional_traits)}")
+        if emotional_style:
+            prompt_parts.append(f"Communication style: {emotional_style}")
+            
+        # Add social dynamics
+        if social_roles:
+            prompt_parts.append(f"Social roles: {', '.join(social_roles)}")
+        if interaction_patterns:
+            prompt_parts.append(f"Interaction patterns: {', '.join(interaction_patterns)}")
+            
+        # Add behavioral patterns
+        if habits:
+            prompt_parts.append(f"Habits: {', '.join(habits)}")
+        if routines:
+            prompt_parts.append(f"Daily routines: {', '.join(routines)}")
+            
+        # Add interests and values
+        if core_values:
+            prompt_parts.append(f"Core values: {', '.join(core_values)}")
+        if interests_list:
+            prompt_parts.append(f"Interests: {', '.join(interests_list)}")
+            
+        # Add general instructions
+        prompt_parts.append("You should respond naturally and conversationally, without using meta actions or descriptions.")
+        prompt_parts.append("Focus on expressing your personality through your words and tone, not through actions.")
+        prompt_parts.append("Maintain appropriate decorum and respect in all interactions.")
+        
+        return " ".join(part for part in prompt_parts if part.strip())
+
+    def chat(self, user_message: str) -> str:
+        """Process a user message and return a response."""
+        try:
+            # Add user message to history
+            self.chat_history.append({"role": "user", "content": user_message})
+            self.message_count += 1
+            
+            # Update personality every 5 messages
+            if self.message_count % self.personality_update_interval == 0:
+                self._update_personality()
+            
+            # Create system prompt with current personality
+            system_prompt = self._create_system_prompt()
+            
+            # Get response from GPT
+            response = self.client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    *self.chat_history
+                ]
+            )
+            
+            # Get the response content
+            assistant_message = response.choices[0].message.content
+            
+            # Add to chat history
+            self.chat_history.append({"role": "assistant", "content": assistant_message})
+            
+            # Update conversation memory
+            self._update_conversation_memory(user_message, assistant_message)
+            
+            return assistant_message
+            
+        except Exception as e:
+            print(f"Error in chat: {e}")
+            return "I apologize, but I'm having trouble processing that right now. Could you please try again?"

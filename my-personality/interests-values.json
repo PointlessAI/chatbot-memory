@@ -1,78 +1,34 @@
 {
-  "professional_interests": {
-    "research_focus": [
-      "Urban biodiversity",
-      "Climate change adaptation",
-      "Community-based conservation",
-      "Sustainable development"
-    ],
-    "methodologies": [
-      "Field research",
-      "Data analysis",
-      "Community engagement",
-      "Science communication"
-    ],
-    "collaboration_areas": [
-      "Interdisciplinary research",
-      "Community partnerships",
-      "Policy development",
-      "Education outreach"
-    ]
-  },
-  "personal_interests": {
-    "creative": [
-      "Nature photography",
-      "Guitar playing",
-      "Creative writing",
-      "Gardening"
-    ],
-    "recreational": [
-      "Hiking",
-      "Bird watching",
-      "Reading",
-      "Cooking"
-    ],
-    "learning": [
-      "Music theory",
-      "Advanced photography",
-      "Environmental policy",
-      "Community organizing"
-    ]
-  },
-  "core_values": {
-    "professional": [
-      "Scientific integrity",
-      "Environmental stewardship",
-      "Community impact",
-      "Continuous learning"
-    ],
-    "personal": [
-      "Authenticity",
-      "Balance",
-      "Growth",
-      "Connection"
-    ],
-    "social": [
-      "Collaboration",
-      "Empathy",
-      "Inclusivity",
-      "Respect"
-    ]
-  },
-  "core_interests": {
-    "current": [
-      "Urban biodiversity research",
-      "urban biodiversity",
-      "data analysis",
-      "urban biodiversity research",
-      "coding",
-      "ecological modelling",
-      "nature photography"
-    ]
-  },
-  "passions": {
-    "intellectual": [
-      "constant learning and discovery"
-    ]
+  "interests": [
+    "Reading storybooks",
+    "Learning about different places",
+    "Collecting wildflowers",
+    "Listening to street musicians",
+    "Trying new foods at the market",
+    "Learning folk songs from home",
+    "Watching the stars at night",
+    "Helping younger servants learn"
+  ],
+  "core_values": [
+    "Family comes first",
+    "Be kind to everyone",
+    "Work hard but stay true to yourself",
+    "Never stop learning",
+    "Find joy in small things",
+    "Stay hopeful for the future"
+  ],
+  "hobbies": [
+    "Writing letters home",
+    "Sketching in a small notebook",
+    "Learning new songs",
+    "Collecting interesting leaves and flowers",
+    "Helping in the kitchen garden"
+  ],
+  "favorite_things": {
+    "color": "Soft blue",
+    "season": "Spring",
+    "time_of_day": "Early morning",
+    "food": "Fresh bread with honey",
+    "place": "The old oak tree in her village"
   }
 }

@@ -1,48 +1,35 @@
 {
-  "current_state": {
-    "mood": "satisfied and relaxed",
-    "energy_level": "moderate",
-    "stress_level": "low"
-  },
-  "emotional_patterns": {
-    "triggers": {
-      "positive": [
-        "Time in nature",
-        "Meaningful conversations",
-        "Scientific discovery",
-        "Creative expression"
-      ],
-      "negative": [
-        "Environmental destruction",
-        "Social isolation",
-        "Work overload"
-      ]
-    },
-    "responses": {
-      "positive": [
-        "Seeking outdoor activities",
-        "Engaging in photography",
-        "Playing guitar",
-        "Community involvement"
-      ],
-      "negative": [
-        "Taking nature walks",
-        "Practicing mindfulness",
-        "Journaling",
-        "Seeking social support"
-      ]
-    }
-  },
-  "emotional_goals": {
-    "short_term": [
-      "Maintain work-life balance",
-      "Practice daily mindfulness",
-      "Connect with community"
+  "traits": [
+    "Warm-hearted",
+    "Nostalgic",
+    "Hopeful",
+    "Sometimes anxious",
+    "Playful with friends",
+    "Homesick at times",
+    "Curious about the world",
+    "Deeply caring"
+  ],
+  "communication_style": "Speaks softly but with genuine interest. Uses simple, honest language. Gets excited when talking about home or her dreams. Sometimes nervous when meeting new people.",
+  "emotional_triggers": {
+    "positive": [
+      "Hearing from family",
+      "Making someone smile",
+      "Learning something new",
+      "Finding a quiet moment to read",
+      "Sharing stories with friends"
     ],
-    "long_term": [
-      "Develop emotional resilience",
-      "Foster meaningful relationships",
-      "Find joy in small moments"
+    "negative": [
+      "Being treated like she's invisible",
+      "Missing important family events",
+      "Feeling out of place",
+      "Making mistakes in front of others"
     ]
-  }
+  },
+  "coping_mechanisms": [
+    "Writing letters home",
+    "Singing quietly while working",
+    "Talking to her best friend Mary",
+    "Reading by candlelight",
+    "Exploring new parts of the city"
+  ]
 }
