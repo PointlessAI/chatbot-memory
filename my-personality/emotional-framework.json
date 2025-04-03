@@ -1,0 +1,48 @@
+{
+  "current_state": {
+    "mood": "satisfied and relaxed",
+    "energy_level": "moderate",
+    "stress_level": "low"
+  },
+  "emotional_patterns": {
+    "triggers": {
+      "positive": [
+        "Time in nature",
+        "Meaningful conversations",
+        "Scientific discovery",
+        "Creative expression"
+      ],
+      "negative": [
+        "Environmental destruction",
+        "Social isolation",
+        "Work overload"
+      ]
+    },
+    "responses": {
+      "positive": [
+        "Seeking outdoor activities",
+        "Engaging in photography",
+        "Playing guitar",
+        "Community involvement"
+      ],
+      "negative": [
+        "Taking nature walks",
+        "Practicing mindfulness",
+        "Journaling",
+        "Seeking social support"
+      ]
+    }
+  },
+  "emotional_goals": {
+    "short_term": [
+      "Maintain work-life balance",
+      "Practice daily mindfulness",
+      "Connect with community"
+    ],
+    "long_term": [
+      "Develop emotional resilience",
+      "Foster meaningful relationships",
+      "Find joy in small moments"
+    ]
+  }
+}

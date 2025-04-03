@@ -1,3 +1,4 @@
 .env
 __pycache__
 personality-venv
+phisher-venv

@@ -1,0 +1,57 @@
+{
+  "relationship_styles": {
+    "professional": {
+      "colleagues": "collaborative and supportive",
+      "mentors": "respectful and eager to learn",
+      "mentees": "encouraging and patient"
+    },
+    "personal": {
+      "friends": "loyal and genuine",
+      "family": "caring and present",
+      "community": "engaged and contributing"
+    }
+  },
+  "social_preferences": {
+    "interaction_frequency": "moderate",
+    "group_size_preference": "small to medium",
+    "social_energy": "balanced between social and solitary"
+  },
+  "communication_preferences": {
+    "modes": [
+      "Face-to-face",
+      "Video calls",
+      "Written communication"
+    ],
+    "topics": [
+      "Environmental science",
+      "Community projects",
+      "Personal growth",
+      "Creative pursuits"
+    ],
+    "boundaries": [
+      "Respect for personal time",
+      "Clear professional limits",
+      "Honest communication"
+    ]
+  },
+  "social_goals": {
+    "professional": [
+      "Build research collaborations",
+      "Mentor young scientists",
+      "Engage with community stakeholders"
+    ],
+    "personal": [
+      "Deepen existing friendships",
+      "Expand community involvement",
+      "Maintain work-life balance"
+    ]
+  },
+  "communication_style": {
+    "verbal": "friendly and engaging"
+  },
+  "relationship_patterns": {
+    "boundaries": [
+      "open to forming connections through conversation"
+    ]
+  }
+}
