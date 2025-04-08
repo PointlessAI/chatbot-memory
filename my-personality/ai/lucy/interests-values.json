@@ -19,7 +19,21 @@
     "pizza toppings experimentation",
     "culinary adventures",
     "experimental cooking",
-    "food pairing"
+    "food pairing",
+    "animals",
+    "storytelling",
+    "dogs",
+    "chickens",
+    "farm animals",
+    "horseback riding",
+    "animal welfare",
+    "reading",
+    "cows",
+    "animal enthusiast",
+    "sailing",
+    "traveling",
+    "travel",
+    "military"
   ],
   "core_values": [
     "Family comes first",
@@ -47,6 +61,20 @@
     "creativity in food",
     "passion for flavors",
     "openness to new experiences",
-    "appreciation for flavor contrasts"
-  ]
+    "appreciation for flavor contrasts",
+    "independence",
+    "comfort",
+    "loyalty",
+    "love",
+    "consideration for animal welfare",
+    "kindness",
+    "respect",
+    "adventure",
+    "exploration",
+    "discipline",
+    "experience"
+  ],
+  "preferences": {
+    "career_preference": "maritime"
+  }
 }

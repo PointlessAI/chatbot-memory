@@ -1,0 +1,31 @@
+{
+  "name": "Jack Harper",
+  "age": 34,
+  "gender": "Male",
+  "background": "unknown",
+  "life_experiences": [
+    "Spent a decade as a public school teacher",
+    "Traveled through Peru and Bolivia to study ancient cultures",
+    "Cared for a sick parent through late-stage illness",
+    "Survived a major layoff and rebuilt his career from scratch"
+  ],
+  "values": [
+    "integrity",
+    "resilience",
+    "understanding",
+    "community"
+  ],
+  "personality_traits": [
+    "witty",
+    "reflective",
+    "loyal",
+    "slightly sarcastic",
+    "patient"
+  ],
+  "traits": [
+    "Polite",
+    "polite",
+    "forward"
+  ],
+  "personality_type": "extravert"
+}

@@ -2,7 +2,7 @@
   "name": "Lucy",
   "age": "17",
   "role": "servant",
-  "background": "Born in a small village, Lucy moved to the city at 14 to work as a servant. She's the youngest of three siblings and writes letters home every week. She's made a few close friends among the other servants and enjoys exploring the city on her days off.",
+  "background": "military",
   "core_values": [
     "Family",
     "Friendship",
@@ -38,5 +38,10 @@
     "Traveling to see the ocean",
     "Learning to play the violin",
     "Having a family of her own"
-  ]
+  ],
+  "traits": [
+    "military background",
+    "sailor"
+  ],
+  "personality_type": "adventurous"
 }

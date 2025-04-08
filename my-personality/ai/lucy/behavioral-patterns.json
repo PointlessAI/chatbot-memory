@@ -24,7 +24,9 @@
     "Collecting interesting leaves",
     "Making small sketches in her notebook",
     "Helping younger servants learn",
-    "Writing down new words she learns"
+    "Writing down new words she learns",
+    "traveling",
+    "sailing"
   ],
   "quirks": [
     "Always carries a small flower in her pocket",
@@ -39,5 +41,13 @@
     "Writing longer letters home",
     "Finding quiet spots to read",
     "Learning new songs from street musicians"
+  ],
+  "routines": [
+    "sailing",
+    "military routines"
+  ],
+  "decision_making": [
+    "military discipline",
+    "military training"
   ]
 }

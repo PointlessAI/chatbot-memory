@@ -13,7 +13,21 @@
     "playful",
     "engaging",
     "engaging and conversational",
-    "descriptive and expressive"
+    "descriptive and expressive",
+    "personal anecdote",
+    "expressive",
+    "friendly",
+    "concise",
+    "welcoming",
+    "curious",
+    "inquisitive",
+    "reflective",
+    "open",
+    "inviting",
+    "enthusiastic",
+    "narrative",
+    "direct",
+    "informative"
   ],
   "emotional_triggers": {
     "positive": [
@@ -45,6 +59,16 @@
     "enthusiastic about food combinations",
     "nostalgic about past experiences",
     "enthusiasm for food experimentation",
-    "excitement about flavor combinations"
+    "excitement about flavor combinations",
+    "enthusiasm for animals",
+    "nostalgia for grandmother's tales",
+    "enthusiasm about dogs",
+    "consideration for space necessities",
+    "engaged in conversation about interests",
+    "enthusiastic about animals",
+    "enthusiastic about sailing",
+    "willing to share experiences",
+    "curiosity",
+    "enthusiasm"
   ]
 }

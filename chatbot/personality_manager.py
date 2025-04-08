@@ -1,99 +1,107 @@
 # chatbot/personality_manager.py
 import os
 import json
-from typing import List, Dict, Any
+import shutil
+from typing import Dict, Optional
 
 class PersonalityManager:
-    def __init__(self, base_dir="my-personality"):
-        """Initialize the personality manager with the base directory containing all personalities."""
+    def __init__(self, base_dir: str = "my-personality"):
         self.base_dir = base_dir
-        self.personality_files = [
-            'core-identity.json',
-            'emotional-framework.json',
-            'cognitive-style.json',
-            'social-dynamics.json',
-            'interests-values.json',
-            'behavioral-patterns.json',
-            'memory-growth.json',
-            'user-profile.json'
-        ]
-        self.current_personality = {}
         self.personality_dir = None
+        self.current_personality = {}
         
-    def list_available_personalities(self) -> List[str]:
-        """Get a list of available personalities."""
-        try:
-            personalities = [d for d in os.listdir(self.base_dir) 
-                           if os.path.isdir(os.path.join(self.base_dir, d))]
-            return sorted(personalities)
-        except Exception as e:
-            print(f"Error listing personalities: {e}")
-            return []
-    
-    def load_personality(self, personality_name: str) -> bool:
-        """Load a specific personality by name."""
-        try:
-            personality_path = os.path.join(self.base_dir, personality_name)
-            if not os.path.isdir(personality_path):
-                print(f"Error: Personality '{personality_name}' not found.")
+        # Create users directory if it doesn't exist
+        self.users_dir = os.path.join(base_dir, "users")
+        if not os.path.exists(self.users_dir):
+            os.makedirs(self.users_dir)
+
+    def create_blank_personality(self, name: str, is_user: bool = False) -> None:
+        """Create a new personality with blank template files."""
+        target_dir = os.path.join(self.users_dir if is_user else self.base_dir, name)
+        if not os.path.exists(target_dir):
+            os.makedirs(target_dir)
+
+        # Template structure for a new personality
+        blank_template = {
+            "core-identity.json": {
+                "name": name,
+                "background": "",
+                "traits": [],
+                "personality_type": ""
+            },
+            "interests-values.json": {
+                "interests": [],
+                "values": [],
+                "preferences": {}
+            },
+            "emotional-framework.json": {
+                "emotional_range": [],
+                "communication_style": [],
+                "observed_responses": []
+            },
+            "behavioral-patterns.json": {
+                "habits": [],
+                "routines": [],
+                "decision_making": []
+            },
+            "cognitive-style.json": {
+                "thinking_patterns": [],
+                "learning_style": [],
+                "problem_solving": []
+            },
+            "memory-growth.json": {
+                "experiences": [],
+                "learned_concepts": [],
+                "growth_areas": []
+            }
+        }
+
+        # Create each file with blank template
+        for filename, content in blank_template.items():
+            file_path = os.path.join(target_dir, filename)
+            with open(file_path, 'w') as f:
+                json.dump(content, f, indent=2)
+
+    def load_personality(self, name: str, is_user: bool = False) -> bool:
+        """Load a personality by name. Returns True if successful."""
+        if is_user:
+            target_dir = os.path.join(self.users_dir, name)
+        else:
+            target_dir = os.path.join(self.base_dir, "ai", name)
+        
+        if not os.path.exists(target_dir):
+            if is_user:
+                print(f"Creating new user personality: {name}")
+                self.create_blank_personality(name, is_user=True)
+            else:
                 return False
-            
-            self.personality_dir = personality_path
-            return self._load_personality()
-        except Exception as e:
-            print(f"Error in load_personality: {e}")
-            return False
-    
-    def _load_personality(self) -> bool:
-        """Load all personality files into current_personality."""
-        try:
-            self.current_personality = {}
-            for filename in self.personality_files:
-                file_path = os.path.join(self.personality_dir, filename)
-                if os.path.exists(file_path):
-                    try:
-                        with open(file_path, 'r') as f:
-                            name = os.path.splitext(filename)[0]
-                            self.current_personality[name] = json.load(f)
-                    except json.JSONDecodeError as e:
-                        print(f"Error parsing {filename}: {e}")
-                        return False
-                else:
-                    print(f"Warning: {filename} not found in {self.personality_dir}")
-                    self.current_personality[os.path.splitext(filename)[0]] = {}
-            return True
-        except Exception as e:
-            print(f"Error in _load_personality: {e}")
-            return False
-    
-    def get_personality_traits(self) -> List[str]:
-        """Get personality traits from core identity."""
-        core_identity = self.current_personality.get('core-identity', {})
-        return core_identity.get('core_values', [])
-    
-    def get_user_profile(self) -> Dict[str, Any]:
-        """Get the user profile."""
-        return self.current_personality.get('user-profile', {})
-    
-    def update_memory(self, memory_text: str, assistant_name: str):
-        """Update memory growth with new interactions."""
-        memory_file = os.path.join(self.personality_dir, 'memory-growth.json')
-        try:
-            with open(memory_file, 'r') as f:
-                memory_data = json.load(f)
-            
-            # Add new memory
-            memory_data['memories'].append({
-                'timestamp': datetime.datetime.now().isoformat(),
-                'content': memory_text,
-                'assistant': assistant_name
-            })
-            
-            # Keep only recent memories
-            memory_data['memories'] = memory_data['memories'][-50:]  # Keep last 50 memories
-            
-            with open(memory_file, 'w') as f:
-                json.dump(memory_data, f, indent=4)
+
+        self.personality_dir = target_dir
+        self._load_personality_files()
+        return True
+
+    def _load_personality_files(self) -> None:
+        """Load all personality files from the current personality directory."""
+        self.current_personality = {}
+        json_files = [f for f in os.listdir(self.personality_dir) if f.endswith('.json')]
         
-        except Exception as e:
-            print(f"Error updating memory: {e}")
+        for filename in json_files:
+            file_path = os.path.join(self.personality_dir, filename)
+            try:
+                with open(file_path, 'r') as f:
+                    self.current_personality[filename] = json.load(f)
+            except json.JSONDecodeError as e:
+                print(f"Error loading {filename}: {e}")
+                self.current_personality[filename] = {}
+
+    def save_personality_file(self, filename: str, data: Dict) -> None:
+        """Save updates to a personality file."""
+        if self.personality_dir is None:
+            raise ValueError("No personality loaded")
+            
+        file_path = os.path.join(self.personality_dir, filename)
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        # Update current personality
+        self.current_personality[filename] = data
