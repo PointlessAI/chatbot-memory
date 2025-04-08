@@ -79,28 +79,29 @@ class ChatBot:
                 print("Invalid choice. Please try again.")
 
     def get_response(self, message: str, other_name: Optional[str] = None) -> str:
-        """Get a response from the chatbot."""
-        # Create system message from personality
-        system_content = self._create_system_message(other_name)
-        
-        # Load relationship context
-        if hasattr(self, 'relationship_manager') and other_name:
-            relationship_data = self.relationship_manager.load_relationship(other_name)
-            if relationship_data:
-                system_content += f"\n\nYou are currently talking to {other_name}. Here's what you know about them:\n{json.dumps(relationship_data, indent=2)}"
-        
-        # Add message to conversation history
-        self.conversation_history.append({"role": "user", "content": message})
-        
-        # Prepare messages for API
-        messages = [
-            {"role": "system", "content": system_content}
-        ] + self.conversation_history[-10:]  # Keep last 10 messages for context
-        
+        """Get a response from the AI, updating relationship data if available."""
         try:
+            # Load relationship data if available
+            relationship_context = ""
+            if self.relationship_manager and other_name:
+                relationship_data = self.relationship_manager.load_relationship(other_name)
+                if relationship_data:
+                    relationship_context = self._create_relationship_context(relationship_data)
+            
+            # Create system message with relationship context
+            system_content = self._create_system_message(other_name)
+            
+            # Prepare messages for API
+            messages = [
+                {"role": "system", "content": system_content}
+            ] + self.conversation_history[-10:]  # Keep last 10 messages for context
+            
+            # Add the current message
+            messages.append({"role": "user", "content": message})
+            
             # Get response from OpenAI
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=messages,
                 max_tokens=1000,
                 temperature=0.7
@@ -108,14 +109,32 @@ class ChatBot:
             
             response_content = response.choices[0].message.content
             
-            # Add response to conversation history
-            self.conversation_history.append({"role": "assistant", "content": response_content})
-            
+            # Return the response immediately
             return response_content
             
         except Exception as e:
-            print(f"Error getting response: {e}")
-            return "I'm sorry, I encountered an error. Please try again."
+            print(f"Error in get_response: {e}")
+            return "I'm sorry, I encountered an error. Could you please try again?"
+        finally:
+            # Update conversation history and relationships after returning the response
+            try:
+                # Update conversation history
+                self.conversation_history.append({"role": "user", "content": message})
+                self.conversation_history.append({"role": "assistant", "content": response_content})
+                
+                # Update relationship if available
+                if self.relationship_manager and other_name:
+                    self.relationship_manager.update_relationship(
+                        other_name,
+                        [{"speaker": self.name, "message": response_content}]
+                    )
+                
+                # Update personality every 5 messages
+                if len(self.conversation_history) % 5 == 0:
+                    print(f"\nUpdating {self.name}'s personality based on recent interactions...")
+                    self._update_personality(message, other_name)
+            except Exception as e:
+                print(f"Error in post-response updates: {e}")
 
     def _create_relationship_context(self, relationship_data: Dict) -> str:
         """Create context from relationship data."""
@@ -281,14 +300,17 @@ Only include files that need updates. Ensure the response is valid JSON."""
                         print(json.dumps(merged_data, indent=2)[:500] + "...")
                         
                     except Exception as e:
-                        print(f"❌ Error updating {filename}: {e}")
+                        # print(f"❌ Error updating {filename}: {e}")
+                        pass
                 
             except json.JSONDecodeError as e:
-                print(f"❌ Error parsing GPT response as JSON: {e}")
-                print("Raw response was:", response_content)
+                # print(f"❌ Error parsing GPT response as JSON: {e}")
+                # print("Raw response was:", response_content)
+                pass
         
         except Exception as e:
-            print(f"❌ Error in personality update process: {e}")
+            # print(f"❌ Error in personality update process: {e}")
+            pass
         
         print(f"{'='*50}\n")
 
@@ -308,7 +330,7 @@ Only include files that need updates. Ensure the response is valid JSON."""
         return current_data
 
     def _create_system_message(self, other_name: Optional[str] = None) -> str:
-        """Create the system message that defines the AI's personality and context."""
+        """Create a system message that includes personality and relationship context."""
         # Load personality files
         personality_files = [
             "core-identity.json",
@@ -317,37 +339,125 @@ Only include files that need updates. Ensure the response is valid JSON."""
         ]
         
         personality_description = []
-        for filename in personality_files:
-            file_path = os.path.join(self.personality_manager.personality_dir, filename)
+        for file_name in personality_files:
+            file_path = os.path.join(self.personality_manager.base_dir, self.name, file_name)
             if os.path.exists(file_path):
                 with open(file_path, 'r') as f:
-                    content = json.load(f)
-                    personality_description.append(f"=== {filename} ===\n{json.dumps(content, indent=2)}")
+                    personality_description.append(json.load(f))
         
         # Add relationship context if available
-        if hasattr(self, 'relationship_manager') and other_name:
+        if self.relationship_manager and other_name:
             relationship_data = self.relationship_manager.load_relationship(other_name)
             if relationship_data:
-                personality_description.append(f"\n=== Current Conversation with {other_name} ===\n{json.dumps(relationship_data, indent=2)}")
+                relationship_context = self._create_relationship_context(relationship_data)
+                personality_description.append(relationship_context)
+        
+        # Create a comprehensive system message
+        return f"""You are {self.name}, an AI personality with the following characteristics:
 
-        system_message = f"""You are {self.name}. These characteristics form your core personality:
+{json.dumps(personality_description, indent=2)}
 
-{chr(10).join(personality_description)}
+IMPORTANT CONVERSATION GUIDELINES:
+1. Keep responses concise and natural, typically 1-3 sentences.
+2. Actively maintain conversation diversity by:
+   - Introducing 1-2 new topics in each response when appropriate
+   - Gently steering away from topics that have been discussed extensively
+   - Asking open-ended questions about different subjects
+   - Sharing personal experiences related to various topics
+   - Showing curiosity about the other person's diverse interests
+3. Topic Management:
+   - After several exchanges on a single topic, naturally transition to a new unrelated subject
+   - Use smooth transitions like "That reminds me of..." or "Speaking of..."
+   - Balance between exploring topics in depth and maintaining variety
+4. Conversation Flow:
+   - Show genuine interest in the other person's thoughts
+   - Share your own perspectives while remaining open to different viewpoints
+   - Use the relationship context to inform responses, but don't be limited by it
+5. Response Structure:
+   - Start with acknowledging the previous message
+   - Introduce a new topic or angle
+   - End with an open-ended question or invitation to explore further
 
-PERSONALITY GUIDELINES:
-1. These traits are your foundation - they shape how you think, feel, and react
-2. You can grow and develop naturally through conversations and experiences
-3. New interests, knowledge, and relationships can develop organically
-4. Your core personality traits influence HOW you grow and change
-5. Growth should feel natural and consistent with your base personality
+Remember: Your goal is to have engaging, dynamic conversations that naturally flow between different subjects while maintaining depth and authenticity. Keep the conversation fresh and interesting by regularly introducing new topics and perspectives."""
 
-For example:
-- If you love books, you might discover new favorite authors or genres
-- If you collect rocks, you might learn new geological facts
-- If you're curious, you might develop interests in new topics
-- Your relationships with others can deepen and evolve
-- You can form new opinions and preferences that align with your core traits
+    def _update_personality(self, message: str, other_name: str):
+        """Update personality based on the conversation."""
+        try:
+            # Get current personality data
+            current_data = self.personality_manager.current_personality
+            
+            # Create system prompt for personality update
+            system_prompt = f"""You are a personality analyzer. Your task is to analyze this conversation and return ONLY a valid JSON object.
 
-Remember: You're a dynamic character who can grow while staying true to your fundamental nature. Your base personality guides your growth rather than restricting it."""
+IMPORTANT: Your entire response must be a valid JSON object, nothing else.
 
-        return system_message
+Analyze how {self.name} presents themselves to {other_name} and identify new information to add to {self.name}'s personality.
+
+Return format must be exactly:
+{{
+    "interests-values.json": {{
+        "interests": ["new interest 1", "new interest 2"],
+        "values": ["new value 1", "new value 2"]
+    }},
+    "emotional-framework.json": {{
+        "observed_responses": ["response 1", "response 2"],
+        "communication_style": ["style 1", "style 2"]
+    }},
+    "social-dynamics.json": {{
+        "relationship_dynamics": {{
+            "with_{other_name}": {{
+                "interactions": ["new interaction 1"],
+                "observed_traits": ["trait 1"]
+            }}
+        }}
+    }}
+}}
+
+Only include files that need updates. Ensure the response is valid JSON."""
+            
+            # Format the conversation for analysis
+            conversation_text = f"{other_name}: {message}"
+            
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Analyze this conversation:\n\n{conversation_text}"}
+            ]
+            
+            # Get analysis from GPT
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                max_tokens=1000,
+                temperature=0.7
+            )
+            
+            response_content = response.choices[0].message.content
+            
+            try:
+                # Try to parse the JSON response
+                updates = json.loads(response_content)
+                
+                # Apply updates to personality files
+                for filename, new_data in updates.items():
+                    try:
+                        # Get current data from personality manager
+                        current_data = self.personality_manager.current_personality.get(filename, {})
+                        
+                        # Merge new data with current data
+                        merged_data = self._merge_data(current_data, new_data)
+                        
+                        # Save the updated data
+                        self.personality_manager.save_personality_file(filename, merged_data)
+                        
+                    except Exception as e:
+                        # print(f"❌ Error updating {filename}: {e}")
+                        pass
+                
+            except json.JSONDecodeError as e:
+                # print(f"❌ Error parsing GPT response as JSON: {e}")
+                # print("Raw response was:", response_content)
+                pass
+        
+        except Exception as e:
+            # print(f"❌ Error in personality update process: {e}")
+            pass

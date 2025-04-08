@@ -5,5 +5,17 @@
   "communication_preferences": "Prefers thoughtful, paced conversations. Can get playful with those he trusts.",
   "social_preferences": [
     "engages first"
-  ]
+  ],
+  "relationship_dynamics": {
+    "with_lucy": {
+      "interactions": [
+        "shared cooking experiences",
+        "discussing food and drink pairings"
+      ],
+      "observed_traits": [
+        "creativity",
+        "sociability"
+      ]
+    }
+  }
 }

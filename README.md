@@ -1,96 +1,125 @@
-# Long Term Memory Chatbot
+# AI Personality System
 
-A sophisticated AI chatbot with persistent personality and memory, designed to maintain consistent character traits and conversation history across sessions.
+A sophisticated AI personality system that creates and manages dynamic AI personalities with evolving traits, relationships, and conversation styles.
 
 ## Features
 
-- **Persistent Personality**: Maintains a consistent personality across conversations through structured personality files
-- **Dynamic Memory System**: Remembers past conversations and uses them to inform future interactions
-- **Emotional Intelligence**: Tracks and evolves emotional states based on interactions
-- **Natural Conversation**: Engages in human-like dialogue while maintaining character consistency
+- **Dynamic Personalities**: AI personalities that grow and evolve through interactions
+- **Relationship Management**: Tracks and develops relationships between AI and users
+- **Autonomous Conversations**: AI personalities can chat with each other
+- **Personality Evolution**: Personalities update based on interactions
+- **Diverse Conversations**: Natural topic transitions and varied discussions
+- **Memory Management**: Summarizes and preserves important relationship details
 
-## Personality Structure
+## Directory Structure
 
-The AI's personality is maintained through several JSON files in the `my-personality` directory:
+```
+my-personality/
+├── ai/
+│   ├── jack/
+│   │   ├── core-identity.json
+│   │   ├── interests-values.json
+│   │   └── emotional-framework.json
+│   └── rob/
+│       ├── core-identity.json
+│       ├── interests-values.json
+│       └── emotional-framework.json
+└── users/
+    ├── user1/
+    │   └── is_user
+    └── user2/
+        └── is_user
+```
 
-- `core-identity.json`: Defines fundamental traits, values, and life philosophy
-- `emotional-framework.json`: Tracks current emotional state and patterns
-- `cognitive-style.json`: Describes thinking and learning patterns
-- `social-dynamics.json`: Outlines communication and relationship styles
-- `interests-values.json`: Lists professional and personal interests
-- `behavioral-patterns.json`: Details daily routines and interaction patterns
-- `memory-growth.json`: Stores conversation history and personal growth
+## Core Components
 
-## Memory Management
+### 1. Personality Management
+- **Personality Files**: JSON files defining core traits, interests, and emotional framework
+- **Dynamic Updates**: Personalities evolve through conversations
+- **User Profiles**: Simple marker-based user identification
 
-The system implements a sophisticated memory management approach:
+### 2. Relationship System
+- **Relationship Tracking**: Monitors interactions and emotional dynamics
+- **Automatic Summarization**: Creates comprehensive summaries every 200 lines
+- **Context Preservation**: Maintains important relationship details
+- **Data Reset**: Clears old data after summarization to manage context window
 
-- **Recent Memory Window**: Maintains a rolling window of the most recent conversations
-- **Memory Compression**: Summarizes older conversations to maintain context while managing size
-- **Core Memories**: Preserves important formative experiences and key learnings
-- **Growth Tracking**: Monitors personal development and current focus areas
+### 3. Conversation System
+- **Natural Flow**: Smooth transitions between topics
+- **Topic Diversity**: Introduces new subjects regularly
+- **Response Structure**: 
+  - Acknowledges previous messages
+  - Introduces new topics
+  - Ends with open-ended questions
+- **Personality Updates**: Occurs every 5 messages during interactions
 
-## Conversation Features
+### 4. Autonomous Chat
+- **AI-to-AI Interaction**: Enables conversations between AI personalities
+- **Personality Evolution**: Both AIs learn from their interactions
+- **Regular Updates**: Personality files update every 10 turns
 
-- **Natural Dialogue**: Engages in human-like conversation while maintaining character
-- **Context Awareness**: Uses recent memories to inform responses
-- **Personality Evolution**: Updates traits based on conversation patterns
-- **Emotional Response**: Maintains and evolves emotional states through interactions
+## Usage
 
-## Setup
+1. **Setup**:
+   ```bash
+   python main.py
+   ```
+
+2. **Create/Select Personality**:
+   - Choose an existing AI personality or create a new user profile
+   - AI personalities are stored in the `ai/` directory
+   - User profiles are stored in the `users/` directory
+
+3. **Start Chatting**:
+   - Chat with an AI personality
+   - Watch as the personality evolves through interactions
+   - Relationships develop and are tracked automatically
+
+4. **Autonomous Mode**:
+   - Select two AI personalities to chat with each other
+   - Observe how they interact and learn from each other
+   - Monitor personality updates and relationship development
+
+## Personality Evolution
+
+The system implements several mechanisms for personality growth:
+
+1. **Regular Updates**:
+   - Every 5 messages in user interactions
+   - Every 10 turns in autonomous chat
+   - Updates include new interests, values, and traits
+
+2. **Relationship Development**:
+   - Tracks interactions and emotional dynamics
+   - Creates comprehensive summaries
+   - Preserves important relationship context
+
+3. **Conversation Diversity**:
+   - Natural topic transitions
+   - Regular introduction of new subjects
+   - Balanced exploration of topics
+
+## Requirements
+
+- Python 3.8+
+- OpenAI API key
+- Required packages: openai, python-dotenv
+
+## Installation
 
 1. Clone the repository
 2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-3. Set up your OpenAI API key in a `.env` file:
+3. Create a `.env` file with your OpenAI API key:
    ```
    OPENAI_API_KEY=your_api_key_here
    ```
 
-## Usage
+## Notes
 
-Run the chatbot:
-```bash
-python main.py
-```
-
-The chatbot will:
-1. Load existing personality files or create new ones
-2. Initialize conversation memory
-3. Begin an interactive chat session
-
-## Personality Files
-
-### Core Identity (`core-identity.json`)
-- Name, age, and profession
-- Core values and life philosophy
-- Personality traits (primary and secondary)
-- Aspirations and identity anchors
-
-### Emotional Framework (`emotional-framework.json`)
-- Current emotional state (mood, energy, stress)
-- Emotional patterns and triggers
-- Coping strategies and emotional goals
-
-### Memory Growth (`memory-growth.json`)
-- Core memories and formative experiences
-- Recent conversation history
-- Growth tracking and learning cycles
-- Current focus areas
-
-## Development
-
-The system is built with extensibility in mind:
-- New personality traits can be added to existing files
-- Memory management can be adjusted through configuration
-- Conversation patterns can be modified to suit different use cases
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+- The system uses GPT-4o-mini for all AI interactions
+- Relationship data is summarized every 200 lines to manage context
+- User profiles are minimal, focusing on relationship context
+- AI personalities maintain comprehensive personality files

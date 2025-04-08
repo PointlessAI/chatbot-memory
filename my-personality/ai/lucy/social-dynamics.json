@@ -33,5 +33,25 @@
   ],
   "social_preferences": [
     "open conversation"
-  ]
+  ],
+  "relationship_dynamics": {
+    "with_jack": {
+      "interactions": [
+        "sharing cooking ideas",
+        "discussing favorite recipes"
+      ],
+      "observed_traits": [
+        "enthusiastic cook",
+        "community-oriented"
+      ]
+    },
+    "with_rob": {
+      "interactions": [
+        "sharing daily habits"
+      ],
+      "observed_traits": [
+        "easy-going"
+      ]
+    }
+  }
 }

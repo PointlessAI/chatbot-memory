@@ -4,14 +4,17 @@ import json
 import os
 from typing import List, Dict, Optional
 from .chatbot import ChatBot
+from dotenv import load_dotenv
+from openai import OpenAI
 
 class AutonomousChat:
     def __init__(self, delay: float = 2.0):
-        self.bot1 = ChatBot("jack")
-        self.bot2 = ChatBot("lucy")
         self.delay = delay
-        self.max_turns = 20
-        self.conversation_history = []
+        load_dotenv()
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            raise ValueError("OpenAI API key not found in environment variables or .env file")
+        self.client = OpenAI(api_key=api_key)
 
     def _create_context_message(self, speaker_name: str, listener_name: str) -> str:
         """Create context message for the current speaker."""
@@ -26,15 +29,36 @@ class AutonomousChat:
 
     def _update_personality_files(self, speaker: ChatBot, listener: ChatBot, conversation_segment: List[Dict]):
         """Update the personality files based on the conversation."""
-        print(f"\n{'='*50}")
-        print(f"Analyzing conversation for {listener.name}'s personality updates...")
-        print(f"Conversation segment length: {len(conversation_segment)} messages")
+        # print(f"\n{'='*50}")
+        # print(f"Analyzing conversation for {listener.name}'s personality updates...")
+        # print(f"Conversation segment length: {len(conversation_segment)} messages")
+        
+        # Separate messages by speaker
+        speaker_messages = [msg for msg in conversation_segment if msg["speaker"] == speaker.name]
+        listener_messages = [msg for msg in conversation_segment if msg["speaker"] == listener.name]
+        
+        # Create conversation pairs for analysis
+        conversation_pairs = []
+        for i in range(len(conversation_segment)):
+            if i > 0:  # Skip the first message as it has no previous context
+                prev_msg = conversation_segment[i-1]
+                current_msg = conversation_segment[i]
+                conversation_pairs.append({
+                    "previous": prev_msg,
+                    "current": current_msg
+                })
         
         system_prompt = f"""You are a personality analyzer. Your task is to analyze this conversation and return ONLY a valid JSON object.
 
 IMPORTANT: Your entire response must be a valid JSON object, nothing else.
 
 Analyze how {speaker.name} presents themselves to {listener.name} and identify new information to add to {listener.name}'s understanding.
+
+Consider the following aspects:
+1. How {speaker.name} responds to {listener.name}'s messages
+2. New interests or values revealed in the conversation
+3. Emotional responses and communication style
+4. Relationship dynamics and social preferences
 
 Return format must be exactly:
 {{
@@ -61,8 +85,8 @@ Only include files that need updates. Ensure the response is valid JSON."""
         try:
             # Format the conversation for analysis
             conversation_text = "\n".join([
-                f"{msg['speaker']}: {msg['message']}" 
-                for msg in conversation_segment
+                f"{pair['previous']['speaker']}: {pair['previous']['message']}\n{pair['current']['speaker']}: {pair['current']['message']}"
+                for pair in conversation_pairs
             ])
             
             messages = [
@@ -70,10 +94,10 @@ Only include files that need updates. Ensure the response is valid JSON."""
                 {"role": "user", "content": f"Analyze this conversation:\n\n{conversation_text}"}
             ]
             
-            print(f"\nSending conversation analysis request for {listener.name}...")
+            # print(f"\nSending conversation analysis request for {listener.name}...")
             
             # Get analysis from GPT
-            response = listener.client.chat.completions.create(
+            response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
                 max_tokens=1000,
@@ -81,13 +105,13 @@ Only include files that need updates. Ensure the response is valid JSON."""
             )
             
             response_content = response.choices[0].message.content
-            print("\nAnalysis received. Processing updates...")
+            # print("\nAnalysis received. Processing updates...")
             
             try:
                 # Try to parse the JSON response
                 updates = json.loads(response_content)
-                print(f"\nUpdates to be applied to {listener.name}'s personality:")
-                print(json.dumps(updates, indent=2))
+                # print(f"\nUpdates to be applied to {listener.name}'s personality:")
+                # print(json.dumps(updates, indent=2))
                 
                 # Apply updates to listener's personality files
                 for filename, new_data in updates.items():
@@ -101,21 +125,24 @@ Only include files that need updates. Ensure the response is valid JSON."""
                         # Save the updated data
                         listener.personality_manager.save_personality_file(filename, merged_data)
                             
-                        print(f"\n✅ Successfully updated {listener.name}'s {filename}")
-                        print(f"Updated content preview:")
-                        print(json.dumps(merged_data, indent=2)[:500] + "...")
+                        # print(f"\n✅ Successfully updated {listener.name}'s {filename}")
+                        # print(f"Updated content preview:")
+                        # print(json.dumps(merged_data, indent=2)[:500] + "...")
                         
                     except Exception as e:
-                        print(f"❌ Error updating {filename}: {e}")
+                        # print(f"❌ Error updating {filename}: {e}")
+                        pass
                 
             except json.JSONDecodeError as e:
-                print(f"❌ Error parsing GPT response as JSON: {e}")
-                print("Raw response was:", response_content)
+                # print(f"❌ Error parsing GPT response as JSON: {e}")
+                # print("Raw response was:", response_content)
+                pass
         
         except Exception as e:
-            print(f"❌ Error in personality update process: {e}")
+            # print(f"❌ Error in personality update process: {e}")
+            pass
         
-        print(f"{'='*50}\n")
+        # print(f"{'='*50}\n")
 
     def _merge_data(self, current_data: Dict, new_data: Dict) -> Dict:
         """Merge new data into current data, handling nested structures."""
@@ -132,113 +159,128 @@ Only include files that need updates. Ensure the response is valid JSON."""
                 current_data[key] = value
         return current_data
 
-    def start_conversation(self, num_turns: Optional[int] = None):
-        """Start an autonomous conversation between the two chatbots."""
-        if num_turns is not None:
-            self.max_turns = num_turns
+    def start_conversation(self, bot1: ChatBot, bot2: ChatBot):
+        """Start an autonomous conversation between two AI personalities."""
+        print(f"\nStarting autonomous conversation between {bot1.name} and {bot2.name}...")
+        print("Conversation will run continuously. Press Ctrl+C to stop.")
         
-        print(f"\nStarting conversation between {self.bot1.name} and {self.bot2.name}...")
-        print("=" * 50)
+        turns = input("\nHow many turns? (default: 20): ")
+        num_turns = int(turns) if turns.isdigit() else 20
         
-        # Generate initial message with a more natural prompt
-        system_prompt = f"""You are {self.bot1.name}. Start a natural conversation with {self.bot2.name}.
-        Important:
-        - Be natural and varied in your conversation style
-        - You don't need to start with a greeting if you don't want to
-        - You can start with an observation, question, or statement
-        - Express your personality through your unique way of speaking
-        - Avoid formulaic greetings like "Hey [name]!"
+        # Initialize conversation with a natural greeting
+        initial_message = f"Hi {bot2.name}! It's so nice to see you again. How have you been?"
+        print(f"\n{bot1.name}: {initial_message}")
         
-        Example natural starters:
-        - "The sunset is beautiful today, isn't it?"
-        - "I've been thinking about that book you mentioned..."
-        - "You won't believe what just happened!"
-        - "Do you ever wonder about..."
-        
-        Speak naturally, as if you're in the middle of an ongoing relationship."""
+        # Initialize conversation history
+        conversation_history = [
+            {"speaker": bot1.name, "message": initial_message}
+        ]
         
         try:
-            response = self.bot1.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "system", "content": system_prompt}],
-                max_tokens=100
-            )
-            current_message = response.choices[0].message.content
-        except Exception as e:
-            print(f"Error generating initial message: {e}")
-            current_message = "I've been thinking about something interesting lately..."
-        
-        current_speaker = self.bot1
-        next_speaker = self.bot2
-        
-        conversation_segment = []
-        
-        for turn in range(self.max_turns):
-            try:
-                print(f"\n{current_speaker.name}: {current_message}")
-                
-                # Add current message to conversation segment
-                message_data = {
-                    "speaker": current_speaker.name,
-                    "listener": next_speaker.name,
-                    "message": current_message
-                }
-                self.conversation_history.append(message_data)
-                conversation_segment.append(message_data)
-                
-                context = self._create_context_message(next_speaker.name, current_speaker.name)
-                
-                messages = [
-                    {"role": "system", "content": context},
-                    {"role": "user", "content": current_message}
-                ]
-                
-                response = next_speaker.client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=messages,
-                    max_tokens=150
+            # First response from bot2
+            response = bot2.get_response(initial_message, bot1.name)
+            print(f"\n{bot2.name}: {response}")
+            conversation_history.append({"speaker": bot2.name, "message": response})
+            
+            # Update relationship for bot2
+            if hasattr(bot2, 'relationship_manager'):
+                bot2.relationship_manager.update_relationship(
+                    bot1.name,
+                    [{"speaker": bot2.name, "message": response}]
                 )
+            
+            # Main conversation loop
+            for turn in range(1, num_turns):
+                # Get the last message from the conversation history
+                last_message = conversation_history[-1]
                 
-                response_text = response.choices[0].message.content
+                # Determine current and other speaker based on last message
+                if last_message["speaker"] == bot1.name:
+                    current_speaker = bot2
+                    other_speaker = bot1
+                else:
+                    current_speaker = bot1
+                    other_speaker = bot2
                 
-                # Add response to conversation segment
-                response_data = {
-                    "speaker": next_speaker.name,
-                    "listener": current_speaker.name,
-                    "message": response_text
-                }
-                self.conversation_history.append(response_data)
-                conversation_segment.append(response_data)
+                # Get response from current speaker
+                message = current_speaker.get_response(last_message["message"], other_speaker.name)
+                print(f"\n{current_speaker.name}: {message}")
+                conversation_history.append({"speaker": current_speaker.name, "message": message})
                 
-                # Update personalities after 5 messages
-                if len(conversation_segment) >= 5:
-                    print("\n" + "=" * 50)
-                    print(f"Processing personality updates after {len(conversation_segment)} messages...")
-                    print("Current conversation segment:")
-                    for msg in conversation_segment:
-                        print(f"{msg['speaker']}: {msg['message']}")
+                # Update relationship for current speaker
+                if hasattr(current_speaker, 'relationship_manager'):
+                    current_speaker.relationship_manager.update_relationship(
+                        other_speaker.name,
+                        [{"speaker": current_speaker.name, "message": message}]
+                    )
+                
+                # Update personality files every 10 turns
+                if turn % 10 == 0:
+                    print(f"\nUpdating personality files for {current_speaker.name} and {other_speaker.name}...")
+                    # Get the last 10 messages for each bot
+                    bot1_messages = [msg for msg in conversation_history[-20:] if msg["speaker"] == bot1.name]
+                    bot2_messages = [msg for msg in conversation_history[-20:] if msg["speaker"] == bot2.name]
                     
-                    print("\nUpdating personalities...")
-                    self._update_personality_files(current_speaker, next_speaker, conversation_segment)
-                    self._update_personality_files(next_speaker, current_speaker, conversation_segment)
-                    print("=" * 50 + "\n")
-                    
-                    # Keep the last message for context
-                    conversation_segment = [conversation_segment[-1]]
+                    # Update personalities
+                    self._update_personality_files(bot1, bot2, bot1_messages)
+                    self._update_personality_files(bot2, bot1, bot2_messages)
+                    print("Personality files updated successfully.")
                 
-                current_speaker, next_speaker = next_speaker, current_speaker
-                current_message = response_text
-                
+                # Add a small delay between turns
                 time.sleep(self.delay)
                 
-            except Exception as e:
-                print(f"\nError in conversation turn: {e}")
-                break
+        except KeyboardInterrupt:
+            print("\n\nConversation ended by user.")
+        except Exception as e:
+            print(f"\nError in conversation: {e}")
+
+    def _create_system_message(self) -> str:
+        """Create a system message that includes personality and relationship context."""
+        # Load personality files
+        personality_files = [
+            "core-identity.json",
+            "interests-values.json",
+            "emotional-framework.json"
+        ]
         
-        if conversation_segment:
-            print("\nProcessing final conversation segment...")
-            self._update_personality_files(self.bot1, self.bot2, conversation_segment)
-            self._update_personality_files(self.bot2, self.bot1, conversation_segment)
+        personality_description = []
+        for file_name in personality_files:
+            file_path = os.path.join(self.personality_manager.base_dir, self.name, file_name)
+            if os.path.exists(file_path):
+                with open(file_path, 'r') as f:
+                    personality_description.append(json.load(f))
         
-        print("\n" + "=" * 50)
-        print("Conversation ended.")
+        # Add relationship context if available
+        if self.relationship_manager and self.other_name:
+            relationship_data = self.relationship_manager.load_relationship(self.other_name)
+            if relationship_data:
+                relationship_context = self._create_relationship_context(relationship_data)
+                personality_description.append(relationship_context)
+        
+        # Create a comprehensive system message
+        return f"""You are {self.name}, an AI personality with the following characteristics:
+
+{json.dumps(personality_description, indent=2)}
+
+IMPORTANT CONVERSATION GUIDELINES:
+1. Keep responses concise and natural, typically 1-3 sentences.
+2. Actively maintain conversation diversity by:
+   - Introducing 1-2 new topics in each response when appropriate
+   - Gently steering away from topics that have been discussed extensively
+   - Asking open-ended questions about different subjects
+   - Sharing personal experiences related to various topics
+   - Showing curiosity about the other person's diverse interests
+3. Topic Management:
+   - After 2-3 exchanges on a single topic, naturally transition to a new subject
+   - Use smooth transitions like "That reminds me of..." or "Speaking of..."
+   - Balance between exploring topics in depth and maintaining variety
+4. Conversation Flow:
+   - Show genuine interest in the other person's thoughts
+   - Share your own perspectives while remaining open to different viewpoints
+   - Use the relationship context to inform responses, but don't be limited by it
+5. Response Structure:
+   - Start with acknowledging the previous message
+   - Introduce a new topic or angle
+   - End with an open-ended question or invitation to explore further
+
+Remember: Your goal is to have engaging, dynamic conversations that naturally flow between different subjects while maintaining depth and authenticity. Keep the conversation fresh and interesting by regularly introducing new topics and perspectives."""
