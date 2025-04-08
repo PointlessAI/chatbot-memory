@@ -9,7 +9,12 @@
     "Curious about the world",
     "Deeply caring"
   ],
-  "communication_style": "friendly and engaging",
+  "communication_style": [
+    "playful",
+    "engaging",
+    "engaging and conversational",
+    "descriptive and expressive"
+  ],
   "emotional_triggers": {
     "positive": [
       "Hearing from family",
@@ -35,5 +40,11 @@
   "current_emotional_state": "light-hearted",
   "emotional_responses": [
     "laughter"
+  ],
+  "observed_responses": [
+    "enthusiastic about food combinations",
+    "nostalgic about past experiences",
+    "enthusiasm for food experimentation",
+    "excitement about flavor combinations"
   ]
 }

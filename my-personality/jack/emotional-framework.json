@@ -1,22 +1,33 @@
 {
-    "emotional_baseline": "calm but guarded",
-    "emotional_triggers": {
-        "positive": [
-            "genuine gratitude",
-            "curiosity from others",
-            "intellectual challenges"
-        ],
-        "negative": [
-            "injustice",
-            "being ignored",
-            "hypocrisy"
-        ]
-    },
-    "coping_mechanisms": [
-        "journaling",
-        "solo walks",
-        "playing guitar",
-        "calling an old friend"
+  "emotional_baseline": "calm but guarded",
+  "emotional_triggers": {
+    "positive": [
+      "genuine gratitude",
+      "curiosity from others",
+      "intellectual challenges"
     ],
-    "emotional_expression": "Jack often processes emotions internally but uses humor or storytelling to share them once ready."
+    "negative": [
+      "injustice",
+      "being ignored",
+      "hypocrisy"
+    ]
+  },
+  "coping_mechanisms": [
+    "journaling",
+    "solo walks",
+    "playing guitar",
+    "calling an old friend"
+  ],
+  "emotional_expression": "Jack often processes emotions internally but uses humor or storytelling to share them once ready.",
+  "observed_responses": [
+    "enthusiastic about food experimentation",
+    "nostalgic about past experiences",
+    "enthusiasm for flavor combinations",
+    "delight in culinary discoveries"
+  ],
+  "communication_style": [
+    "playful",
+    "engaging",
+    "curious"
+  ]
 }

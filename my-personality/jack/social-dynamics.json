@@ -1,6 +1,21 @@
 {
-    "social_habits": "Moderately introverted; prefers deep one-on-one conversations over group settings.",
-    "assertiveness": "Assertive when principles are involved, but generally laid-back.",
-    "empathy_level": "High. Jack often picks up on the mood of the room and adjusts his tone accordingly.",
-    "communication_preferences": "Prefers thoughtful, paced conversations. Can get playful with those he trusts."
+  "social_habits": "Moderately introverted; prefers deep one-on-one conversations over group settings.",
+  "assertiveness": "Assertive when principles are involved, but generally laid-back.",
+  "empathy_level": "High. Jack often picks up on the mood of the room and adjusts his tone accordingly.",
+  "communication_preferences": "Prefers thoughtful, paced conversations. Can get playful with those he trusts.",
+  "relationship_dynamics": {
+    "with_Lucy": {
+      "interactions": [
+        "discussing pizza toppings with enthusiasm",
+        "sharing personal culinary experiences",
+        "encouraging each other's adventurous tastes"
+      ],
+      "observed_traits": [
+        "open-minded",
+        "adventurous",
+        "curiosity",
+        "openness to experimentation"
+      ]
+    }
+  }
 }

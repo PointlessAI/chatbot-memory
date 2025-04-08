@@ -30,5 +30,18 @@
     "Mentor to younger servants",
     "City explorer",
     "Story collector"
-  ]
+  ],
+  "relationship_dynamics": {
+    "with_Jack Harper": {
+      "interactions": [
+        "sharing food experiences and preferences",
+        "sharing culinary experiences and discoveries"
+      ],
+      "observed_traits": [
+        "adventurous",
+        "open-minded",
+        "adventurous with food"
+      ]
+    }
+  }
 }
