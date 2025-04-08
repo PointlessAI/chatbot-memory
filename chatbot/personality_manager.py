@@ -1,106 +1,70 @@
 # chatbot/personality_manager.py
 import os
-import glob
 import json
-import datetime
-from typing import Dict, Any, List
+from typing import List, Dict, Any
 
 class PersonalityManager:
-    def __init__(self, personality_dir="my-personality"):
-        """Initialize the personality manager with a directory containing personality files."""
-        self.personality_dir = personality_dir
-        self.personality_files = {
-            'core-identity': 'core-identity.json',
-            'emotional-framework': 'emotional-framework.json',
-            'cognitive-style': 'cognitive-style.json',
-            'social-dynamics': 'social-dynamics.json',
-            'interests-values': 'interests-values.json',
-            'behavioral-patterns': 'behavioral-patterns.json',
-            'memory-growth': 'memory-growth.json',
-            'user-profile': 'user-profile.json'
-        }
+    def __init__(self, base_dir="my-personality"):
+        """Initialize the personality manager with the base directory containing all personalities."""
+        self.base_dir = base_dir
+        self.personality_files = [
+            'core-identity.json',
+            'emotional-framework.json',
+            'cognitive-style.json',
+            'social-dynamics.json',
+            'interests-values.json',
+            'behavioral-patterns.json',
+            'memory-growth.json',
+            'user-profile.json'
+        ]
         self.current_personality = {}
+        self.personality_dir = None
         
-        # Ensure directory exists
-        if not os.path.exists(self.personality_dir):
-            os.makedirs(self.personality_dir)
-        
-        # Initialize files if they don't exist
-        self._initialize_personality_files()
-        self._load_personality()
+    def list_available_personalities(self) -> List[str]:
+        """Get a list of available personalities."""
+        try:
+            personalities = [d for d in os.listdir(self.base_dir) 
+                           if os.path.isdir(os.path.join(self.base_dir, d))]
+            return sorted(personalities)
+        except Exception as e:
+            print(f"Error listing personalities: {e}")
+            return []
     
-    def _initialize_personality_files(self):
-        """Create empty template files if they don't exist."""
-        template = {
-            "core-identity.json": {
-                "name": "",
-                "age": "",
-                "profession": "",
-                "core_values": [],
-                "life_philosophy": "",
-                "aspirations": []
-            },
-            "emotional-framework.json": {
-                "current_state": {
-                    "mood": "",
-                    "energy_level": "",
-                    "stress_level": ""
-                },
-                "emotional_patterns": {
-                    "triggers": {"positive": [], "negative": []},
-                    "responses": {"positive": [], "negative": []}
-                }
-            },
-            "cognitive-style.json": {
-                "thinking_patterns": [],
-                "learning_style": "",
-                "problem_solving": ""
-            },
-            "social-dynamics.json": {
-                "relationship_styles": {},
-                "social_preferences": {},
-                "communication_preferences": {}
-            },
-            "interests-values.json": {
-                "interests": [],
-                "values": [],
-                "preferences": {}
-            },
-            "behavioral-patterns.json": {
-                "habits": [],
-                "routines": [],
-                "responses": {}
-            },
-            "memory-growth.json": {
-                "memories": [],
-                "learned_concepts": [],
-                "growth_areas": []
-            },
-            "user-profile.json": {
-                "personal_info": {},
-                "preferences": {},
-                "relationship": {}
-            }
-        }
-        
-        # Only create files if they don't exist
-        for filename, default_content in template.items():
-            file_path = os.path.join(self.personality_dir, filename)
-            if not os.path.exists(file_path):
-                with open(file_path, 'w') as f:
-                    json.dump(default_content, f, indent=4)
+    def load_personality(self, personality_name: str) -> bool:
+        """Load a specific personality by name."""
+        try:
+            personality_path = os.path.join(self.base_dir, personality_name)
+            if not os.path.isdir(personality_path):
+                print(f"Error: Personality '{personality_name}' not found.")
+                return False
+            
+            self.personality_dir = personality_path
+            return self._load_personality()
+        except Exception as e:
+            print(f"Error in load_personality: {e}")
+            return False
     
-    def _load_personality(self):
+    def _load_personality(self) -> bool:
         """Load all personality files into current_personality."""
-        self.current_personality = {}
-        for category, filename in self.personality_files.items():
-            file_path = os.path.join(self.personality_dir, filename)
-            try:
-                with open(file_path, 'r') as f:
-                    self.current_personality[category] = json.load(f)
-            except Exception as e:
-                print(f"Error loading {filename}: {e}")
-                self.current_personality[category] = {}
+        try:
+            self.current_personality = {}
+            for filename in self.personality_files:
+                file_path = os.path.join(self.personality_dir, filename)
+                if os.path.exists(file_path):
+                    try:
+                        with open(file_path, 'r') as f:
+                            name = os.path.splitext(filename)[0]
+                            self.current_personality[name] = json.load(f)
+                    except json.JSONDecodeError as e:
+                        print(f"Error parsing {filename}: {e}")
+                        return False
+                else:
+                    print(f"Warning: {filename} not found in {self.personality_dir}")
+                    self.current_personality[os.path.splitext(filename)[0]] = {}
+            return True
+        except Exception as e:
+            print(f"Error in _load_personality: {e}")
+            return False
     
     def get_personality_traits(self) -> List[str]:
         """Get personality traits from core identity."""

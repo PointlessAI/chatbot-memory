@@ -11,14 +11,26 @@ from .memory_manager import MemoryManager
 from .personality_updater import PersonalityUpdater
 from .chat_utils import create_welcome_message
 
+# chatbot/chatbot.py
 class ChatBot:
-    def __init__(self, personality_manager: Optional[PersonalityManager] = None):
-        self.personality_manager = personality_manager or PersonalityManager()
+    def __init__(self, personality_name: Optional[str] = None):
+        """
+        Initialize the chatbot with an optional personality name.
+        If no personality is specified, the user will be prompted to choose one.
+        """
+        self.personality_manager = PersonalityManager()
+        
+        if not personality_name:
+            personality_name = self._select_personality()
+        
+        if not self.personality_manager.load_personality(personality_name):
+            raise ValueError(f"Failed to load personality: {personality_name}")
+        
         self.current_personality = self.personality_manager.current_personality
         
         # Get name from core identity
         core_identity = self.current_personality.get('core-identity', {})
-        self.name = core_identity.get('name', '')
+        self.name = core_identity.get('name', 'AI Assistant')
         
         # Initialize OpenAI client
         load_dotenv()
@@ -39,6 +51,24 @@ class ChatBot:
         self.update_counter = 0
         self.message_count = 0
         self.personality_update_interval = 5
+    
+    def _select_personality(self) -> str:
+        """Prompt the user to select a personality."""
+        while True:
+            print("\nAvailable personalities:")
+            personalities = self.personality_manager.list_available_personalities()
+            for i, name in enumerate(personalities, 1):
+                print(f"{i}. {name}")
+            
+            try:
+                choice = input("\nSelect a personality (enter number): ").strip()
+                idx = int(choice) - 1
+                if 0 <= idx < len(personalities):
+                    return personalities[idx]
+                else:
+                    print("Invalid selection. Please try again.")
+            except ValueError:
+                print("Please enter a valid number.")
     
     def _initialize_chat(self):
         user_profile = self.personality_manager.get_user_profile()
