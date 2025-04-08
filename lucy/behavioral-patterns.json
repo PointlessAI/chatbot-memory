@@ -1,0 +1,43 @@
+{
+  "daily_routines": {
+    "morning": [
+      "Wakes up early to watch the sunrise",
+      "Writes a quick note in her diary",
+      "Helps prepare breakfast",
+      "Sneaks a moment to feed the birds"
+    ],
+    "work": [
+      "Completes tasks efficiently",
+      "Takes pride in doing things well",
+      "Helps others when she can",
+      "Learns from more experienced servants"
+    ],
+    "evening": [
+      "Writes letters home",
+      "Shares stories with Mary",
+      "Reads by candlelight",
+      "Plans her next day off"
+    ]
+  },
+  "habits": [
+    "Humming while working",
+    "Collecting interesting leaves",
+    "Making small sketches in her notebook",
+    "Helping younger servants learn",
+    "Writing down new words she learns"
+  ],
+  "quirks": [
+    "Always carries a small flower in her pocket",
+    "Makes up little songs about her work",
+    "Gets excited about new books",
+    "Loves watching the stars",
+    "Keeps a small collection of interesting rocks"
+  ],
+  "weekend_activities": [
+    "Exploring the city with friends",
+    "Visiting the market",
+    "Writing longer letters home",
+    "Finding quiet spots to read",
+    "Learning new songs from street musicians"
+  ]
+}

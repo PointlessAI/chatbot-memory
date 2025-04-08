@@ -9,19 +9,21 @@ from openai import OpenAI
 
 class PersonalityManager:
     def __init__(self, personality_dir="my-personality"):
-        """Initialize the personality manager with a directory for personality files."""
+        """
+        Initialize the personality manager with a directory containing personality files.
+        """
         self.personality_dir = personality_dir
-        self.current_personality = {}
         self.personality_files = {
-            "core-identity": "core-identity.json",
-            "emotional-framework": "emotional-framework.json",
-            "cognitive-style": "cognitive-style.json",
-            "social-dynamics": "social-dynamics.json",
-            "interests-values": "interests-values.json",
-            "behavioral-patterns": "behavioral-patterns.json",
-            "memory-growth": "memory-growth.json",
-            "user-profile": "user-profile.json"
+            'core-identity': 'core-identity.json',
+            'emotional-framework': 'emotional-framework.json',
+            'cognitive-style': 'cognitive-style.json',
+            'social-dynamics': 'social-dynamics.json',
+            'interests-values': 'interests-values.json',
+            'behavioral-patterns': 'behavioral-patterns.json',
+            'memory-growth': 'memory-growth.json',
+            'user-profile': 'user-profile.json'
         }
+        self.current_personality = {}
         self.max_dynamic_size = 512 * 1024  # Reduced from 1MB to 512KB
         self.max_memory_entries = 25  # Reduced from 50
         self.last_update_times = {}
@@ -265,36 +267,34 @@ class PersonalityManager:
         except Exception as e:
             print(f"Error saving to {file_path}: {e}")
 
-    def load_personality(self):
-        """
-        Loads the current personality state from all JSON files.
-        """
-        try:
-            personality = {}
-            
-            # Load each personality file
-            for file_name in self.personality_files.values():
-                file_path = os.path.join(self.personality_dir, file_name)
-                if os.path.exists(file_path):
+    def _load_personality(self):
+        """Load all personality files into memory."""
+        self.current_personality = {}
+        for key, filename in self.personality_files.items():
+            file_path = os.path.join(self.personality_dir, filename)
+            if os.path.exists(file_path):
+                try:
                     with open(file_path, 'r') as f:
-                        content = json.load(f)
-                        # Keep the original file name as the trait name
-                        trait_name = file_name.replace('.json', '')
-                        personality[trait_name] = content
-            
-            # Load conversation memory if it exists
-            memory_path = os.path.join(self.personality_dir, 'memory-growth.json')
-            if os.path.exists(memory_path):
-                with open(memory_path, 'r') as f:
-                    memory_content = json.load(f)
-                    if 'conversation_memory' in memory_content:
-                        personality['conversation_memory'] = memory_content['conversation_memory']
-            
-            return personality
-            
-        except Exception as e:
-            print(f"Error loading personality: {e}")
-            return self._get_default_personality()
+                        self.current_personality[key] = json.load(f)
+                except Exception as e:
+                    print(f"Error loading {filename}: {e}")
+                    self.current_personality[key] = {}
+            else:
+                print(f"Warning: {filename} not found in {self.personality_dir}")
+                self.current_personality[key] = {}
+                
+    def get_personality_traits(self):
+        """Get a summary of the current personality traits."""
+        traits = []
+        if 'core-identity' in self.current_personality:
+            core = self.current_personality['core-identity']
+            if 'personality_traits' in core:
+                traits.extend(core['personality_traits'])
+        if 'emotional-framework' in self.current_personality:
+            emotional = self.current_personality['emotional-framework']
+            if 'traits' in emotional:
+                traits.extend(emotional['traits'])
+        return list(set(traits))  # Remove duplicates
 
     def _count_tokens(self, messages, model="gpt-4o-mini"):
         """
@@ -547,7 +547,7 @@ class PersonalityManager:
 
         try:
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": chat_history_string}
@@ -754,7 +754,7 @@ class PersonalityManager:
 
             try:
                 response = client.chat.completions.create(
-                    model="gpt-4",
+                    model="gpt-4o-mini",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": batch_input}
@@ -884,7 +884,7 @@ class PersonalityManager:
                 )
             
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": summary_prompt},
                     {"role": "user", "content": json.dumps(current_data)}
@@ -1077,74 +1077,47 @@ class PersonalityManager:
         
         return " | ".join(context) if context else "No user information available yet."
 
-    def _update_memory_growth(self, memory_text: str, is_summary: bool = False):
-        """Update the memory growth tracking with new memories."""
+    def _update_memory_growth(self, summary: str):
+        """Update the memory growth file with a new summary."""
         try:
-            # Load existing memories
-            memory_file = os.path.join(self.personality_dir, "memory-growth.json")
-            if os.path.exists(memory_file):
-                with open(memory_file, 'r') as f:
-                    memories = json.load(f)
+            memory_path = os.path.join(self.personality_dir, 'memory-growth.json')
+            
+            # Load existing memory or create new structure
+            if os.path.exists(memory_path):
+                with open(memory_path, 'r') as f:
+                    memory_data = json.load(f)
             else:
-                memories = {"conversation_memory": [], "core_memories": [], "growth_tracking": {}}
+                memory_data = {
+                    "conversation_memory": [],
+                    "emotional_growth": [],
+                    "social_growth": [],
+                    "personal_growth": []
+                }
             
-            # Get assistant and user identities
-            assistant_name = self.current_personality.get("core-identity", {}).get("name", "Assistant")
-            user_profile = self.get_user_profile()
-            user_name = user_profile.get('personal_info', {}).get('name', 'the user')
+            # Ensure conversation_memory exists
+            if 'conversation_memory' not in memory_data:
+                memory_data['conversation_memory'] = []
             
-            # Process memory text to ensure proper role attribution
-            processed_text = memory_text
-            
-            # Check for role confusion patterns
-            role_confusion_patterns = [
-                (f"{assistant_name} is developing", f"{assistant_name} learns about {user_name}'s development of"),
-                (f"{assistant_name}'s project", f"{user_name}'s project"),
-                (f"{assistant_name} is working on", f"{assistant_name} is learning about {user_name}'s work on"),
-                (f"{assistant_name} has created", f"{assistant_name} has learned about {user_name}'s creation of"),
-                (f"{assistant_name} built", f"{assistant_name} learned about {user_name}'s building of")
-            ]
-            
-            for pattern, correction in role_confusion_patterns:
-                if pattern.lower() in processed_text.lower():
-                    processed_text = processed_text.replace(pattern, correction)
-            
-            # Add new memory with proper attribution
+            # Create new memory entry
             new_memory = {
-                "text": processed_text,
+                "text": summary,
                 "timestamp": datetime.datetime.now().isoformat(),
-                "is_summary": is_summary,
-                "assistant_name": assistant_name,
-                "user_name": user_name
+                "assistant_name": self.current_personality.get('core-identity', {}).get('name', 'AI Assistant')
             }
             
             # Add to conversation memory
-            if "conversation_memory" not in memories:
-                memories["conversation_memory"] = []
-            memories["conversation_memory"].append(new_memory)
+            memory_data['conversation_memory'].append(new_memory)
             
-            # Keep only the last 10 memories to prevent excessive growth
-            if len(memories["conversation_memory"]) > 10:
-                memories["conversation_memory"] = memories["conversation_memory"][-10:]
+            # Keep only the most recent entries
+            if len(memory_data['conversation_memory']) > self.max_memory_entries:
+                memory_data['conversation_memory'] = memory_data['conversation_memory'][-self.max_memory_entries:]
             
-            # Save updated memories
-            with open(memory_file, 'w') as f:
-                json.dump(memories, f, indent=2)
-                
+            # Save updated memory
+            with open(memory_path, 'w') as f:
+                json.dump(memory_data, f, indent=2)
+            
+            # Update current personality
+            self.current_personality['memory-growth'] = memory_data
+            
         except Exception as e:
-            print(f"Error updating memory growth: {e}")
-
-    def _load_personality(self):
-        """Load the current personality from all personality files."""
-        try:
-            self.current_personality = {}
-            for file_name in self.personality_files.values():
-                file_path = os.path.join(self.personality_dir, file_name)
-                if os.path.exists(file_path):
-                    with open(file_path, 'r') as f:
-                        data = json.load(f)
-                        key = os.path.splitext(file_name)[0]
-                        self.current_personality[key] = data
-        except Exception as e:
-            print(f"Error loading personality: {e}")
-            self.current_personality = self._get_default_personality()
+            print(f"Error updating memory: {e}")

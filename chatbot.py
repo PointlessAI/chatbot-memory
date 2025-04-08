@@ -9,14 +9,17 @@ import tiktoken  # Add this import
 from personality_manager import PersonalityManager
 
 class ChatBot:
-    def __init__(self, name="Lucy", entity="AI Assistant", personality_manager=None):
+    def __init__(self, personality_manager=None):
         """
-        Initialize the chatbot with a name and personality manager.
+        Initialize the chatbot with a personality manager.
         """
-        self.name = name
-        self.entity = entity
         self.personality_manager = personality_manager or PersonalityManager()
-        self.current_personality = self.personality_manager.load_personality()
+        self.current_personality = self.personality_manager.current_personality
+        
+        # Get name from core identity
+        core_identity = self.current_personality.get('core-identity', {})
+        self.name = core_identity.get('name', 'AI Assistant')
+        self.entity = "AI Assistant"
         
         # Initialize fresh chat history
         self.chat_history = []
@@ -46,7 +49,7 @@ class ChatBot:
         
         # Start with a minimal system message and greeting
         self.chat_history = [
-            {"role": "system", "content": self._create_minimal_system_prompt()},
+            {"role": "system", "content": self._create_json_system_prompt()},
             {"role": "assistant", "content": greeting}
         ]
         
@@ -94,66 +97,78 @@ class ChatBot:
         else:
             return f"Good day, {user_name}. How are you?"
 
-    def _create_minimal_system_prompt(self):
-        """Create a minimal system prompt that includes core identity and recent context."""
-        # Get assistant's identity
-        core_identity = self.current_personality.get('core-identity', {})
-        name = core_identity.get('name', self.name)
-        role = core_identity.get('role', '')
-        background = core_identity.get('background', '')
-        core_values = core_identity.get('core_values', [])
-        
-        # Get user's profile
-        user_profile = self.personality_manager.get_user_profile()
-        user_name = user_profile.get('personal_info', {}).get('name', 'the user')
-        user_role = user_profile.get('personal_info', {}).get('occupation', '')
-        user_interests = user_profile.get('personal_info', {}).get('interests', [])
-        
-        # Get recent memories for context
-        recent_memories = []
-        if self.conversation_memory:
-            recent_memories = self.conversation_memory[-3:]  # Get last 3 memories
-        
-        # Create memory context
-        memory_context = ""
-        if recent_memories:
-            memory_context = "\nRecent memories:\n" + "\n".join([
-                f"- {memory['text']}" for memory in recent_memories
-            ])
-        
-        # Build the prompt dynamically
+    def _create_json_system_prompt(self):
+        """Create a system prompt that includes the raw JSON content from each personality file."""
         prompt_parts = [
-            "ROLE DEFINITIONS:"
+            "You are an AI assistant with the following personality defined in JSON format. ",
+            "Use this information to maintain consistent character traits and behaviors in all interactions.\n"
         ]
         
-        # Add assistant's role
-        assistant_parts = [f"1. ASSISTANT ({name}):"]
-        if role:
-            assistant_parts.append(f"   - Role: {role}")
-        if background:
-            assistant_parts.append(f"   - Background: {background}")
-        if core_values:
-            assistant_parts.append(f"   - Core values: {', '.join(core_values)}")
-        prompt_parts.extend(assistant_parts)
+        # List of personality files to include
+        personality_files = [
+            "core-identity.json",
+            "emotional-framework.json",
+            "cognitive-style.json",
+            "social-dynamics.json",
+            "interests-values.json",
+            "behavioral-patterns.json",
+            "memory-growth.json"
+        ]
         
-        # Add user's role
-        user_parts = [f"\n2. USER ({user_name}):"]
-        if user_role:
-            user_parts.append(f"   - Role: {user_role}")
-        if user_interests:
-            user_parts.append(f"   - Interests: {', '.join(user_interests)}")
-        prompt_parts.extend(user_parts)
+        # Read and include each personality file
+        for file_name in personality_files:
+            file_path = os.path.join(self.personality_manager.personality_dir, file_name)
+            try:
+                with open(file_path, 'r') as f:
+                    content = json.load(f)
+                    prompt_parts.append(f"\n=== {file_name} ===\n{json.dumps(content, indent=2)}")
+            except Exception as e:
+                print(f"Error reading {file_name}: {e}")
+                continue
+        
+        # Add user profile with clear instructions
+        user_profile_path = os.path.join(self.personality_manager.personality_dir, "user-profile.json")
+        try:
+            with open(user_profile_path, 'r') as f:
+                user_profile = json.load(f)
+                prompt_parts.extend([
+                    "\n=== USER PROFILE ===",
+                    "This is the user's personality and information. Use this to understand and adapt to the user:",
+                    json.dumps(user_profile, indent=2),
+                    "\nIMPORTANT: The above user profile contains information about the person you are talking to.",
+                    "Use this information to personalize your responses and maintain context about the user.",
+                    "Remember their preferences, shared history, and relationship status when interacting.",
+                    "When asked about the user's interests, preferences, or characteristics, always refer to this profile.",
+                    "For example, if asked 'what are my interests?', list the interests from the user's profile.",
+                    "The user's interests are: " + ", ".join(user_profile.get('interests', []))
+                ])
+        except Exception as e:
+            print(f"Error reading user profile: {e}")
         
         # Add conversation rules
         prompt_parts.extend([
             "\nCONVERSATION RULES:",
-            "- Respond naturally and conversationally",
+            "- Use the personality information above to maintain consistent character traits",
             "- Express personality through words and tone, not actions",
             "- Maintain appropriate decorum and respect",
-            f"\nRECENT CONTEXT:{memory_context}"
+            "- Consider the user's preferences and emotional state from their profile",
+            "- Use the shared history to inform responses",
+            "- Adapt communication style based on trust level and emotional bond",
+            "- Be mindful of topics to avoid and favorite topics from the user's profile",
+            "- Incorporate inside jokes and personal rituals when appropriate",
+            "- Reference shared experiences and milestones naturally",
+            "- Provide emotional support when needed",
+            "- Maintain the character's personality traits and values consistently",
+            "- When asked about the user's characteristics, always refer to the user profile",
+            "- Never make up or assume information about the user - only use what's in the profile",
+            "- If asked about user interests, always list the exact interests from the user profile"
         ])
         
-        return "\n".join(part for part in prompt_parts if part.strip())
+        final_prompt = "\n".join(prompt_parts)
+        print("\n=== SYSTEM PROMPT ===")
+        print(final_prompt)
+        print("=== END SYSTEM PROMPT ===\n")
+        return final_prompt
 
     def _count_tokens(self, messages, model="gpt-4o-mini"):
         """
@@ -221,6 +236,79 @@ class ChatBot:
         
         return memory_summary
 
+    def _update_personality_from_conversation(self, user_input: str, assistant_response: str):
+        """Update personality files based on conversation content."""
+        try:
+            # Create a prompt to analyze the conversation for personality updates
+            messages = [
+                {"role": "system", "content": (
+                    "Analyze this conversation and identify any new personality traits, interests, or information "
+                    "that should be added to the personality files. Return a JSON object with updates for each file. "
+                    "Format: {\"file_name\": {\"field\": [\"new_value\"]}}. "
+                    "Only include fields that have new information. "
+                    "For example, if the assistant mentions liking tennis, add it to interests-values.json. "
+                    "If the user mentions liking tennis, add it to user-profile.json. "
+                    "Be specific and accurate in your updates. "
+                    "Your response must be a valid JSON object, nothing else."
+                )},
+                {"role": "user", "content": f"User: {user_input}\nAssistant: {assistant_response}"}
+            ]
+            
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                temperature=0.1  # Lower temperature for more consistent JSON output
+            )
+            
+            # Clean the response to ensure it's valid JSON
+            content = response.choices[0].message.content.strip()
+            # Remove any markdown code block markers if present
+            content = content.replace('```json', '').replace('```', '').strip()
+            
+            try:
+                updates = json.loads(content)
+            except json.JSONDecodeError as e:
+                print(f"Error parsing JSON response: {e}")
+                print(f"Raw response: {content}")
+                return
+            
+            # Process updates for each file
+            for file_name, content in updates.items():
+                file_path = os.path.join(self.personality_manager.personality_dir, file_name)
+                if os.path.exists(file_path):
+                    # Load current content
+                    with open(file_path, 'r') as f:
+                        current_data = json.load(f)
+                    
+                    # Update the content while preserving structure
+                    self._deep_update(current_data, content)
+                    
+                    # Save the updated file
+                    with open(file_path, 'w') as f:
+                        json.dump(current_data, f, indent=2)
+                    
+                    print(f"Updated {file_name} with new information")
+            
+            # Reload personality after updates
+            self._load_personality()
+            
+        except Exception as e:
+            print(f"Error updating personality from conversation: {e}")
+
+    def _deep_update(self, current: dict, new: dict):
+        """Recursively update a dictionary with new values."""
+        for key, value in new.items():
+            if key in current:
+                if isinstance(current[key], dict) and isinstance(value, dict):
+                    self._deep_update(current[key], value)
+                elif isinstance(current[key], list) and isinstance(value, list):
+                    # For lists, extend with new unique items
+                    current[key].extend([item for item in value if item not in current[key]])
+                else:
+                    current[key] = value
+            else:
+                current[key] = value
+
     def generate_response(self, user_input: str) -> str:
         """Generate a response using gpt-4o-mini for most interactions."""
         try:
@@ -229,7 +317,7 @@ class ChatBot:
             
             # Prepare messages with minimal context
             messages = [
-                {"role": "system", "content": self._create_minimal_system_prompt()}
+                {"role": "system", "content": self._create_json_system_prompt()}
             ]
             
             # Add recent memories to context
@@ -257,8 +345,8 @@ class ChatBot:
             # Update chat history
             self.chat_history.append({"role": "assistant", "content": response_text})
             
-            # Update user profile with new information if detected
-            self._update_user_profile_from_conversation(user_input, response_text)
+            # Update personality based on conversation
+            self._update_personality_from_conversation(user_input, response_text)
             
             # Summarize chat history if it gets too long
             if len(self.chat_history) > self.chat_history_summary_count:
@@ -293,7 +381,7 @@ class ChatBot:
             ]
             
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=messages
             )
             
@@ -489,7 +577,7 @@ class ChatBot:
             # Create a prompt for personality analysis
             messages = [
                 {"role": "system", "content": (
-                    "Analyze these recent messages and update Lucy's personality traits. "
+                    f"Analyze these recent messages and update {self.name}'s personality traits. "
                     "Focus on emotional responses, communication style, and behavioral patterns. "
                     "Return a JSON object with updates for each personality file. "
                     "Your response must be a valid JSON object."
@@ -499,7 +587,7 @@ class ChatBot:
             
             # Get personality updates from GPT
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=messages
             )
             
@@ -530,20 +618,6 @@ class ChatBot:
             
         except Exception as e:
             print(f"Error updating personality: {e}")
-
-    def _deep_update(self, current: dict, new: dict):
-        """Recursively update a dictionary with new values."""
-        for key, value in new.items():
-            if key in current:
-                if isinstance(current[key], dict) and isinstance(value, dict):
-                    self._deep_update(current[key], value)
-                elif isinstance(current[key], list) and isinstance(value, list):
-                    # For lists, extend with new unique items
-                    current[key].extend([item for item in value if item not in current[key]])
-                else:
-                    current[key] = value
-            else:
-                current[key] = value
 
     def _create_system_prompt(self) -> str:
         """Create a system prompt that defines the character's identity and communication style."""
@@ -630,7 +704,7 @@ class ChatBot:
             
             # Get response from GPT
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     *self.chat_history

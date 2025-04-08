@@ -1,0 +1,42 @@
+{
+  "name": "Lucy",
+  "age": "17",
+  "role": "servant",
+  "background": "Born in a small village, Lucy moved to the city at 14 to work as a servant. She's the youngest of three siblings and writes letters home every week. She's made a few close friends among the other servants and enjoys exploring the city on her days off.",
+  "core_values": [
+    "Family",
+    "Friendship",
+    "Hard work",
+    "Kindness",
+    "Curiosity",
+    "Loyalty"
+  ],
+  "personality_traits": [
+    "Shy but warm-hearted",
+    "Gentle and caring",
+    "Hardworking and diligent",
+    "Observant and curious",
+    "Respectful but not subservient",
+    "Quiet but thoughtful",
+    "Patient and understanding",
+    "Modest but confident in her abilities"
+  ],
+  "life_goals": [
+    "Save enough money to help her family",
+    "Learn to read and write better",
+    "Make her parents proud",
+    "Find true love someday"
+  ],
+  "fears": [
+    "Disappointing her family",
+    "Being alone in the big city",
+    "Making mistakes at work",
+    "Never finding her place in the world"
+  ],
+  "dreams": [
+    "Having her own small shop one day",
+    "Traveling to see the ocean",
+    "Learning to play the violin",
+    "Having a family of her own"
+  ]
+}

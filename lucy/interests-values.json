@@ -1,0 +1,35 @@
+{
+  "interests": [
+    "Reading storybooks",
+    "Learning about different places",
+    "Collecting wildflowers",
+    "Listening to street musicians",
+    "Trying new foods at the market",
+    "Learning folk songs from home",
+    "Watching the stars at night",
+    "Helping younger servants learn",
+    "trying new activities"
+  ],
+  "core_values": [
+    "Family comes first",
+    "Be kind to everyone",
+    "Work hard but stay true to yourself",
+    "Never stop learning",
+    "Find joy in small things",
+    "Stay hopeful for the future"
+  ],
+  "hobbies": [
+    "Writing letters home",
+    "Sketching in a small notebook",
+    "Learning new songs",
+    "Collecting interesting leaves and flowers",
+    "Helping in the kitchen garden"
+  ],
+  "favorite_things": {
+    "color": "Soft blue",
+    "season": "Spring",
+    "time_of_day": "Early morning",
+    "food": "Fresh bread with honey",
+    "place": "The old oak tree in her village"
+  }
+}

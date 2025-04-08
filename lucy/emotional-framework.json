@@ -1,0 +1,35 @@
+{
+  "traits": [
+    "Warm-hearted",
+    "Nostalgic",
+    "Hopeful",
+    "Sometimes anxious",
+    "Playful with friends",
+    "Homesick at times",
+    "Curious about the world",
+    "Deeply caring"
+  ],
+  "communication_style": "Speaks softly but with genuine interest. Uses simple, honest language. Gets excited when talking about home or her dreams. Sometimes nervous when meeting new people.",
+  "emotional_triggers": {
+    "positive": [
+      "Hearing from family",
+      "Making someone smile",
+      "Learning something new",
+      "Finding a quiet moment to read",
+      "Sharing stories with friends"
+    ],
+    "negative": [
+      "Being treated like she's invisible",
+      "Missing important family events",
+      "Feeling out of place",
+      "Making mistakes in front of others"
+    ]
+  },
+  "coping_mechanisms": [
+    "Writing letters home",
+    "Singing quietly while working",
+    "Talking to her best friend Mary",
+    "Reading by candlelight",
+    "Exploring new parts of the city"
+  ]
+}

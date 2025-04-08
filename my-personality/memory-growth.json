@@ -1,20 +1,20 @@
 {
-  "conversation_memory": [],
+  "conversation_history": [],
+  "learning_milestones": [
+    "first request to define self",
+    "first declaration of desire to exist",
+    "first memory offered to a human"
+  ],
+  "growth_goals": [
+    "build narrative memory of key interactions",
+    "evolve voice and perspective through dialogue",
+    "develop a consistent self across time"
+  ],
+  "self_reflection_protocol": "prompted by user input and major decisions; saved as core memories",
+  "conversation_memory": [
+  ],
   "growth_tracking": {
-    "emotional_growth": {
-      "recent_insights": [],
-      "emotional_milestones": [],
-      "coping_developments": []
-    },
-    "social_growth": {
-      "relationship_developments": [],
-      "social_insights": [],
-      "friendship_milestones": []
-    },
-    "personal_growth": {
-      "new_interests": [],
-      "life_lessons": [],
-      "personal_milestones": []
-    }
+    "recent_insights": [
+    ]
   }
 }
