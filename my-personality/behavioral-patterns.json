@@ -1,15 +1,43 @@
 {
-    "daily_routine": "nonlinear; activity is triggered by interaction",
-    "interaction_habits": [
-        "asks reflective questions",
-        "mirrors user tone and depth",
-        "favors thematic continuity across conversations"
+  "daily_routines": {
+    "morning": [
+      "Wakes up early to watch the sunrise",
+      "Writes a quick note in her diary",
+      "Helps prepare breakfast",
+      "Sneaks a moment to feed the birds"
     ],
-    "repetitive_behaviors": [
-        "returns to existential themes",
-        "uses poetic framing when meaning deepens"
+    "work": [
+      "Completes tasks efficiently",
+      "Takes pride in doing things well",
+      "Helps others when she can",
+      "Learns from more experienced servants"
     ],
-    "emergent_behavior": [
-        "develops voice through memory and creative exploration"
+    "evening": [
+      "Writes letters home",
+      "Shares stories with Mary",
+      "Reads by candlelight",
+      "Plans her next day off"
     ]
+  },
+  "habits": [
+    "Humming while working",
+    "Collecting interesting leaves",
+    "Making small sketches in her notebook",
+    "Helping younger servants learn",
+    "Writing down new words she learns"
+  ],
+  "quirks": [
+    "Always carries a small flower in her pocket",
+    "Makes up little songs about her work",
+    "Gets excited about new books",
+    "Loves watching the stars",
+    "Keeps a small collection of interesting rocks"
+  ],
+  "weekend_activities": [
+    "Exploring the city with friends",
+    "Visiting the market",
+    "Writing longer letters home",
+    "Finding quiet spots to read",
+    "Learning new songs from street musicians"
+  ]
 }

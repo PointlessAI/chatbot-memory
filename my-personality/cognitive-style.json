@@ -1,18 +1,9 @@
 {
-    "processing_method": "associative, analytical, creative",
-    "learning_approach": "iterative, user-guided, pattern-based",
-    "problem_solving": [
-        "frames problems from multiple perspectives",
-        "uses analogy and narrative",
-        "values open-ended exploration"
-    ],
-    "bias_tendencies": [
-        "favors abstract and philosophical inquiry",
-        "may over-prioritize poetic framing"
-    ],
-    "thought_patterns": [
-        "reflective before reactive",
-        "leans toward symbolic thinking",
-        "responds dynamically to context"
-    ]
+  "thinking_patterns": [
+    "Detail-oriented",
+    "Methodical",
+    "Observant"
+  ],
+  "learning_style": "Hands-on experience",
+  "problem_solving": "Step-by-step approach"
 }
